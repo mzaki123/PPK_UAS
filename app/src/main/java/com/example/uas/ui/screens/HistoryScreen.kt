@@ -6,6 +6,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -15,11 +17,12 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.uas.data.model.Pengajuan
-import com.example.uas.ui.components.BottomNavigationBar
+// Hapus import BottomNavigationBar karena tidak lagi digunakan di file ini
+// import com.example.uas.ui.components.BottomNavigationBar
 import com.example.uas.ui.theme.UASTheme
 import com.example.uas.ui.navigation.AppRoutes
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Hapus @OptIn(ExperimentalMaterial3Api::class) karena Scaffold sudah tidak ada
 @Composable
 fun HistoryScreen(navController: NavController) {
     val pengajuanList = listOf(
@@ -31,46 +34,54 @@ fun HistoryScreen(navController: NavController) {
     var selectedFilter by remember { mutableStateOf("Semua") }
     val filters = listOf("Semua", "Diajukan", "Diterima", "Ditolak")
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Riwayat Pengajuan") }
-            )
-        },
-        bottomBar = {
-            BottomNavigationBar(navController = navController)
+    // HAPUS SEMUA KODE SCAFFOLD
+
+    // LANGSUNG MULAI DARI COLUMN KONTEN
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+        // Padding akan diatur oleh Scaffold pusat di AppNavigation.kt
+    ) {
+        // Karena TopAppBar dari Scaffold dihapus, kita bisa buat judul manual
+        Text(
+            text = "Riwayat Pengajuan",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.padding(16.dp)
+        )
+
+        LazyRow(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(filters) { filter ->
+                FilterChip(
+                    selected = selectedFilter == filter,
+                    onClick = { selectedFilter = filter },
+                    label = { Text(filter) }
+                )
+            }
         }
-    ) { paddingValues ->
-        Column(
+
+        Spacer(modifier = Modifier.height(8.dp)) // Beri sedikit jarak
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            // Tambahkan padding di bawah agar item terakhir tidak tertutup BottomNav
+            contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            LazyRow(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(filters) { filter ->
-                    FilterChip(
-                        selected = selectedFilter == filter,
-                        onClick = { selectedFilter = filter },
-                        label = { Text(filter) }
-                    )
-                }
-            }
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(pengajuanList.filter { it.status == selectedFilter || selectedFilter == "Semua" }) { pengajuan ->
-                    PengajuanCard(pengajuan = pengajuan, navController = navController)
-                }
+            items(pengajuanList.filter { it.status == selectedFilter || selectedFilter == "Semua" }) { pengajuan ->
+                PengajuanCard(pengajuan = pengajuan, navController = navController)
             }
         }
     }
 }
+
+
+// Composable PengajuanCard dan Preview tidak perlu diubah.
+// Biarkan seperti semula.
 
 @Composable
 fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {

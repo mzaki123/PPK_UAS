@@ -1,6 +1,7 @@
 package com.example.uas.ui.components
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add // <-- Tambahkan import ini
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -33,28 +34,44 @@ fun BottomNavigationBar(navController: NavController) {
 
     NavigationBar {
         items.forEach { item ->
-            NavigationBarItem(
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) },
-                selected = currentRoute == item.route,
-                onClick = {
-                    navController.navigate(item.route) {
-                        // Pop up to the start destination of the graph to
-                        // avoid building up a large stack of destinations
-                        // on the back stack as users select items
-                        navController.graph.startDestinationRoute?.let { route ->
-                            popUpTo(route) {
-                                saveState = true
-                            }
-                        }
-                        // Avoid multiple copies of the same destination when
-                        // reselecting the same item
-                        launchSingleTop = true
-                        // Restore state when reselecting a previously selected item
-                        restoreState = true
+            // --- INI BAGIAN UTAMA PERUBAHANNYA ---
+
+            val isHistoryTab = item.route == AppRoutes.HISTORY
+            val isCurrentlyOnHistoryScreen = currentRoute == AppRoutes.HISTORY
+
+            // Jika ini adalah tab History DAN kita sedang berada di layar History,
+            // maka ubah ikon dan fungsinya.
+            if (isHistoryTab && isCurrentlyOnHistoryScreen) {
+                // Tampilkan Tombol '+'
+                NavigationBarItem(
+                    icon = { Icon(Icons.Filled.Add, contentDescription = "Ajukan Surat Baru") },
+                    label = { Text("Ajukan") },
+                    selected = true, // Selalu aktif saat di layar History
+                    onClick = {
+                        // Arahkan ke Form Pengajuan
+                        navController.navigate(AppRoutes.FORM_PENGAJUAN)
                     }
-                }
-            )
+                )
+            } else {
+                // Tampilkan item navigasi biasa untuk Home, Profile,
+                // atau History (saat tidak di layar History)
+                NavigationBarItem(
+                    icon = { Icon(item.icon, contentDescription = item.label) },
+                    label = { Text(item.label) },
+                    selected = currentRoute == item.route,
+                    onClick = {
+                        navController.navigate(item.route) {
+                            navController.graph.startDestinationRoute?.let { route ->
+                                popUpTo(route) {
+                                    saveState = true
+                                }
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
         }
     }
 }

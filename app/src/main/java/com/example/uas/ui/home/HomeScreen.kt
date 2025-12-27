@@ -23,153 +23,130 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.uas.R // IMPORTANT: Add an avatar image to your res/drawable folder
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.uas.R
+import com.example.uas.ui.navigation.AppRoutes
 import com.example.uas.ui.theme.UASTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToSubmissionHistory: () -> Unit = {},
-    onNavigateToNewSubmission: () -> Unit = {}
+    navController: NavController,
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Dashboard", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("SIAKTIF Mobile", fontSize = 12.sp, color = Color.Gray)
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Handle notifications */ }) {
-                        Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        },
-        bottomBar = {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(
-                    selected = true,
-                    onClick = {},
-                    icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-                    label = { Text("Home") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Filled.ListAlt, contentDescription = "Pengajuan") },
-                    label = { Text("Pengajuan") }
-                )
-                NavigationBarItem(
-                    selected = false,
-                    onClick = {},
-                    icon = { Icon(Icons.Filled.Person, contentDescription = "Profil") },
-                    label = { Text("Profil") }
-                )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text("Dashboard", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text("SIAKTIF Mobile", fontSize = 12.sp, color = Color.Gray)
+            }
+            IconButton(onClick = { /* TODO: Notifikasi */ }) {
+                Icon(Icons.Filled.Notifications, contentDescription = "Notifications")
             }
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(Color(0xFFF8F9FA))
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Profile Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White)
         ) {
-            // Profile Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.avatar),
-                        contentDescription = "Avatar",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text("MAHASISWA AKTIF", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
-                        Text("Budi Santoso", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                        Text("NIM: 1234567890", fontSize = 14.sp, color = Color.Gray)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Statistics Section
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Statistik Pengajuan", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(
-                    "Semester Ini",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
+                Image(
+                    painter = painterResource(id = R.drawable.avatar),
+                    contentDescription = "Avatar",
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .background(Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .size(60.dp)
+                        .clip(CircleShape)
                 )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("MAHASISWA AKTIF", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary, fontWeight = FontWeight.Bold)
+                    Text("Budi Santoso", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("NIM: 1234567890", fontSize = 14.sp, color = Color.Gray)
+                }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Stat Cards
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard("Total", "12", Icons.Filled.Folder, Color(0xFF314158), 0.8f, modifier = Modifier.weight(1f))
-                StatCard("Diajukan", "2", Icons.Filled.HourglassTop, Color(0xFFE6A23C), 0.2f, modifier = Modifier.weight(1f))
-            }
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatCard("Diterima", "9", Icons.Filled.CheckCircle, Color(0xFF67C23A), 0.7f, modifier = Modifier.weight(1f))
-                StatCard("Ditolak", "1", Icons.Filled.Cancel, Color(0xFFF56C6C), 0.1f, modifier = Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Action Buttons
-            Button(
-                onClick = onNavigateToNewSubmission,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Ajukan Surat Baru", fontSize = 16.sp)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = onNavigateToSubmissionHistory,
-                modifier = Modifier.fillMaxWidth().height(50.dp),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Icon(Icons.Filled.History, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Riwayat Pengajuan", fontSize = 16.sp)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text("Aktivitas Terkini", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Belum ada aktivitas terbaru.", color = Color.Gray, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Statistics Section
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Statistik Pengajuan", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Text(
+                "Semester Ini",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier
+                    .background(Color(0xFFEEEEEE), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Stat Cards
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            StatCard("Total", "12", Icons.Filled.Folder, Color(0xFF314158), 0.8f, modifier = Modifier.weight(1f))
+            StatCard("Diajukan", "2", Icons.Filled.HourglassTop, Color(0xFFE6A23C), 0.2f, modifier = Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            StatCard("Diterima", "9", Icons.Filled.CheckCircle, Color(0xFF67C23A), 0.7f, modifier = Modifier.weight(1f))
+            StatCard("Ditolak", "1", Icons.Filled.Cancel, Color(0xFFF56C6C), 0.1f, modifier = Modifier.weight(1f))
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Action Buttons (SUDAH DIPERBAIKI)
+        Button(
+            onClick = { navController.navigate(AppRoutes.FORM_PENGAJUAN) }, // <-- PERBAIKAN DI SINI
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Ajukan Surat Baru", fontSize = 16.sp)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        OutlinedButton(
+            onClick = { navController.navigate(AppRoutes.HISTORY) },
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Icon(Icons.Filled.History, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Riwayat Pengajuan", fontSize = 16.sp)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text("Aktivitas Terkini", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Belum ada aktivitas terbaru.", color = Color.Gray, modifier=Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
     }
 }
+
+// ... (StatCard dan Preview tidak perlu diubah, biarkan seperti semula) ...
 
 @Composable
 fun StatCard(title: String, value: String, icon: ImageVector, color: Color, progress: Float, modifier: Modifier = Modifier) {
@@ -191,7 +168,7 @@ fun StatCard(title: String, value: String, icon: ImageVector, color: Color, prog
             Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 32.sp, color = color)
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = progress, // Corrected
+                progress = progress,
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                 color = color,
                 trackColor = color.copy(alpha = 0.2f)
@@ -204,6 +181,6 @@ fun StatCard(title: String, value: String, icon: ImageVector, color: Color, prog
 @Composable
 fun HomeScreenPreview() {
     UASTheme {
-        HomeScreen()
+        HomeScreen(navController = rememberNavController())
     }
 }

@@ -10,7 +10,7 @@ object RetrofitInstance {
     // !! IMPORTANT !!
     // Ganti dengan URL dasar (base URL) backend Anda.
     // Contoh: "http://192.168.1.10:8080/api/"
-    private const val BASE_URL = "http://your.api.base.url/"
+    private const val BASE_URL = "http://192.168.0.114:8080/"
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
