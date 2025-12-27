@@ -5,6 +5,10 @@ import com.example.uas.network.dto.LoginResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 
+data class LoginResponse(
+    val token: String,
+    val message: String
+)
 interface ApiService {
 
     @POST("login")
