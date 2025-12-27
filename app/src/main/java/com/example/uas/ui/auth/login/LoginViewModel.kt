@@ -1,4 +1,4 @@
-package com.example.uas.ui.login
+package com.example.uas.ui.auth.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -8,11 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-// This will represent the states of our Login Screen
+// Updated to include role in the Success state
 sealed class LoginUiState {
     object Idle : LoginUiState()
     object Loading : LoginUiState()
-    data class Success(val token: String) : LoginUiState()
+    data class Success(val token: String, val role: String) : LoginUiState()
     data class Error(val message: String) : LoginUiState()
 }
 
@@ -22,17 +22,15 @@ class LoginViewModel : ViewModel() {
     val loginState: StateFlow<LoginUiState> = _loginState
 
     fun loginUser(email: String, password: String) {
-        // Set state to Loading
         _loginState.value = LoginUiState.Loading
 
         viewModelScope.launch {
             try {
                 val request = LoginRequest(email, password)
                 val response = RetrofitInstance.api.login(request)
-                // Set state to Success with the token
-                _loginState.value = LoginUiState.Success(response.accessToken)
+                // Set state to Success with both token and role
+                _loginState.value = LoginUiState.Success(response.accessToken, response.role)
             } catch (e: Exception) {
-                // Set state to Error with the exception message
                 _loginState.value = LoginUiState.Error(e.message ?: "An unknown error occurred")
             }
         }

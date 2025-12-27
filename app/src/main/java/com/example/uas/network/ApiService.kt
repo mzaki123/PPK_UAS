@@ -13,5 +13,15 @@ interface ApiService {
 
     @POST("login")
     suspend fun login(@Body request: LoginRequest): LoginResponse
+
+    @GET("pengajuan")
+    suspend fun getPengajuanList(@Header("Authorization") token: String): List<PengajuanDto>
+
+    @PUT("pengajuan/{id}")
+    suspend fun updatePengajuanStatus(
+        @Header("Authorization") token: String,
+        @Path("id") id: Long,
+        @Body request: UpdateStatusRequest
+    ): PengajuanDto
     
 }
