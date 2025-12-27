@@ -45,7 +45,9 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.uas.R
 // Hapus import Scaffold, TopAppBar, ExperimentalMaterial3Api, BottomNavigationBar
+import com.example.uas.ui.navigation.AppRoutes
 import com.example.uas.ui.theme.UASTheme
+import androidx.compose.foundation.clickable
 
 // Hapus @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,9 +99,19 @@ fun ProfileScreen(navController: NavController) {
         Spacer(modifier = Modifier.height(32.dp))
 
         // Menu
-        ProfileMenuItem(icon = Icons.Filled.Edit, text = "Edit Profil", description = "Perbarui data diri anda")
-        ProfileMenuItem(icon = Icons.Filled.Lock, text = "Ganti Password", description = "Amankan akun anda")
-        ProfileMenuItem(icon = Icons.Filled.Help, text = "Bantuan", description = "Pusat bantuan & FAQ")
+        ProfileMenuItem(
+            icon = Icons.Filled.Edit,
+            text = "Edit Profil",
+            description = "Perbarui data diri anda",
+            onClick = { navController.navigate(AppRoutes.EDIT_PROFILE) }
+        )
+        ProfileMenuItem(
+            icon = Icons.Filled.Lock,
+            text = "Ganti Password",
+            description = "Amankan akun anda",
+            onClick = { navController.navigate(AppRoutes.CHANGE_PASSWORD) }
+        )
+        ProfileMenuItem(icon = Icons.Filled.Help, text = "Bantuan", description = "Pusat bantuan & FAQ", onClick = {})
         Spacer(modifier = Modifier.weight(1f))
 
         // Logout Button
@@ -120,11 +132,12 @@ fun ProfileScreen(navController: NavController) {
 // Biarkan seperti semula.
 
 @Composable
-fun ProfileMenuItem(icon: ImageVector, text: String, description: String) {
+fun ProfileMenuItem(icon: ImageVector, text: String, description: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
+            .clickable(onClick = onClick)
     ) {
         Row(
             modifier = Modifier

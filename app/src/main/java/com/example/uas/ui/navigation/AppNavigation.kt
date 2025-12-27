@@ -13,7 +13,9 @@ import com.example.uas.ui.components.BottomNavigationBar
 import com.example.uas.ui.home.HomeScreen
 import com.example.uas.ui.login.LoginScreen
 import com.example.uas.ui.register.RegisterScreen
+import com.example.uas.ui.screens.ChangePasswordScreen
 import com.example.uas.ui.screens.DetailScreen
+import com.example.uas.ui.screens.EditProfileScreen
 import com.example.uas.ui.screens.FormScreen
 import com.example.uas.ui.screens.HistoryScreen // Pastikan Anda sudah membuat file ini
 import com.example.uas.ui.screens.ProfileScreen  // Pastikan Anda sudah membuat file ini
@@ -25,6 +27,8 @@ object AppRoutes {
     const val HISTORY = "history"
     const val PROFILE = "profile"
     const val DETAIL = "detail"
+    const val EDIT_PROFILE = "edit_profile"
+    const val CHANGE_PASSWORD = "change_password"
 
     const val FORM_PENGAJUAN = "form_pengajuan" // <-- TAMBAHKAN BARIS INI
 }
@@ -93,6 +97,12 @@ fun AppNavigation() {
             }
             composable(AppRoutes.FORM_PENGAJUAN) {
                 FormScreen(navController = navController)
+            }
+            composable(AppRoutes.EDIT_PROFILE) {
+                EditProfileScreen(navController = navController)
+            }
+            composable(AppRoutes.CHANGE_PASSWORD) {
+                ChangePasswordScreen(navController = navController)
             }
 
 
