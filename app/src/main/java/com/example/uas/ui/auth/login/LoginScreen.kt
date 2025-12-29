@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,8 +39,6 @@ fun LoginScreen(
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val context = LocalContext.current
-
     LaunchedEffect(loginState) {
         when (val state = loginState) {
             is LoginUiState.Success -> {
@@ -50,8 +47,7 @@ fun LoginScreen(
                 val role = responseBody?.role
 
                 if (token != null && role != null) {
-                    // Initialize SessionManager and login
-                    SessionManager.init(context)
+                    // SessionManager is already initialized in MyApplication
                     SessionManager.login(token, role)
 
                     onLoginSuccess(role)
