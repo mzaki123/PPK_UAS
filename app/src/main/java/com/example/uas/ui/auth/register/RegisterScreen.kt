@@ -1,4 +1,4 @@
-package com.example.uas.ui.register
+package com.example.uas.ui.auth.register
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState

@@ -1,4 +1,4 @@
-package com.example.uas.ui.home
+package com.example.uas.ui.mahasiswa.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.uas.R
-import com.example.uas.ui.navigation.AppRoutes
+import com.example.uas.ui.navigation.Routes
 import com.example.uas.ui.theme.UASTheme
 
 @Composable
@@ -118,7 +118,7 @@ fun HomeScreen(
 
         // Action Buttons (SUDAH DIPERBAIKI)
         Button(
-            onClick = { navController.navigate(AppRoutes.FORM_PENGAJUAN) }, // <-- PERBAIKAN DI SINI
+            onClick = { navController.navigate(Routes.FORM_PENGAJUAN) }, // <-- PERBAIKAN DI SINI
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
@@ -129,7 +129,7 @@ fun HomeScreen(
         }
         Spacer(modifier = Modifier.height(12.dp))
         OutlinedButton(
-            onClick = { navController.navigate(AppRoutes.HISTORY) },
+            onClick = { navController.navigate(Routes.HISTORY) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             shape = RoundedCornerShape(16.dp)
         ) {

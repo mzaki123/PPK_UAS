@@ -11,7 +11,7 @@ import com.example.uas.data.SessionManager
 
 @Composable
 fun LoginScreen(
-    onLoginSuccess: (String) -> Unit, // Callback with user role
+    onLoginSuccess: (String) -> Unit,
     navigateToRegister: () -> Unit
 ) {
     val loginViewModel: LoginViewModel = viewModel()
