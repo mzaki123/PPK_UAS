@@ -23,7 +23,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.uas.model.User
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uas.data.repository.UserRepository
+import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.theme.UASTheme
 
 
@@ -32,17 +34,13 @@ import com.example.uas.ui.theme.UASTheme
 fun DetailUserScreen(
     userId: Long,
     onBackClick: () -> Unit,
-    userViewModel: UserViewModel
+    userViewModel: UserViewModel // Pass the ViewModel
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
     val deleteState by userViewModel.deleteUserState.collectAsState()
-    val userDetailState by userViewModel.userDetailState.collectAsState()
 
-    LaunchedEffect(userId) {
-        if (userId != 0L) {
-            userViewModel.getUserById(userId)
-        }
-    }
+    // Placeholder user data - in a real app, you'd fetch this using userId
+    val user = User(userId, "Budi Santoso", "budi.santoso@univ.ac.id", "Mahasiswa")
 
     LaunchedEffect(deleteState) {
         if (deleteState is DeleteUserUiState.Success) {
@@ -66,58 +64,44 @@ fun DetailUserScreen(
         },
         containerColor = Color(0xFFF6F6F8)
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-            when(val state = userDetailState) {
-                is UserDetailUiState.Loading -> {
-                    CircularProgressIndicator()
-                }
-                is UserDetailUiState.Success -> {
-                    val user = state.user
-                    LazyColumn(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        item {
-                            UserProfileHeader(
-                                name = user.name,
-                                role = user.role,
-                                isActive = true // Placeholder
-                            )
-                        }
-                        item {
-                            UserInfoSection(
-                                nim = user.id.toString(),
-                                email = user.email,
-                                kelas = "TI-3A" // Placeholder
-                            )
-                        }
-                        item {
-                            UserActionButtons(onDeleteClick = { showDeleteDialog = true })
-                        }
-                    }
+        LazyColumn(
+            modifier = Modifier.padding(paddingValues),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                UserProfileHeader(
+                    name = user.name,
+                    role = user.role,
+                    isActive = true
+                )
+            }
+            item {
+                UserInfoSection(
+                    nim = user.id.toString(), // Using ID as NIM for placeholder
+                    email = user.email,
+                    kelas = "TI-3A" // Placeholder
+                )
+            }
 
-                    if (showDeleteDialog) {
-                        DeleteUserDialog(
-                            userName = user.name,
-                            onConfirm = {
-                                userViewModel.deleteUser(user.id)
-                                showDeleteDialog = false
-                            },
-                            onDismiss = { showDeleteDialog = false }
-                        )
-                    }
-                }
-                is UserDetailUiState.Error -> {
-                    Text(state.message, color = MaterialTheme.colorScheme.error)
-                }
-                else -> {
-                    // Idle state
-                }
+            item {
+                UserActionButtons(onDeleteClick = { showDeleteDialog = true })
             }
         }
     }
+
+    if (showDeleteDialog) {
+        DeleteUserDialog(
+            userName = user.name,
+            onConfirm = {
+                userViewModel.deleteUser(user.id)
+                showDeleteDialog = false
+            },
+            onDismiss = { showDeleteDialog = false }
+        )
+    }
 }
 
-// Composables (UserProfileHeader, UserInfoSection, etc.) remain unchanged
+// UserProfileHeader, UserInfoSection, InfoRow, UserActionButtons, DeleteUserDialog remain the same
 @Composable
 fun UserProfileHeader(name: String, role: String, isActive: Boolean) {
     Column(
@@ -311,8 +295,20 @@ fun DeleteUserDialog(
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun DetailUserScreenPreview() {
-    UASTheme {}
+    UASTheme {
+        val viewModelFactory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return UserViewModel(UserRepository(RetrofitInstance.api)) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+        DetailUserScreen(1L, onBackClick = {}, viewModel(factory = viewModelFactory))
+    }
 }
