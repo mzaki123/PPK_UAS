@@ -29,4 +29,13 @@ interface ApiService {
 
     @GET("dashboard/stats")
     suspend fun getDashboardStats(): Response<com.example.uas.model.response.DashboardStatsResponse>
+
+    @PATCH("pengajuan/{id}")
+    suspend fun updatePengajuanStatus(
+        @Path("id") pengajuanId: Long,
+        @Body request: com.example.uas.model.request.PengajuanUpdateStatusRequest
+    ): Response<com.example.uas.model.Pengajuan>
+
+    @GET("pengajuan/{id}")
+    suspend fun getPengajuanById(@Path("id") pengajuanId: Long): Response<com.example.uas.model.Pengajuan>
 }
