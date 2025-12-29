@@ -5,35 +5,66 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.uas.data.SessionManager
+import com.example.uas.data.repository.AuthRepository
+import com.example.uas.model.request.LoginRequest
+import com.example.uas.service.RetrofitInstance
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: (String) -> Unit,
     navigateToRegister: () -> Unit
 ) {
-    val loginViewModel: LoginViewModel = viewModel()
+    // Basic ViewModelFactory
+    val viewModelFactory = remember {
+        object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return LoginViewModel(AuthRepository(RetrofitInstance.api)) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    }
+
+    val loginViewModel: LoginViewModel = viewModel(factory = viewModelFactory)
     val loginState by loginViewModel.loginState.collectAsState()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
 
     LaunchedEffect(loginState) {
         when (val state = loginState) {
             is LoginUiState.Success -> {
-                // Save session and navigate
-                SessionManager.login(state.token, state.role)
-                onLoginSuccess(state.role)
-                showError = false
+                val responseBody = state.data.body()
+                val token = responseBody?.accessToken
+                val role = responseBody?.role
+
+                if (token != null && role != null) {
+                    // Initialize SessionManager and login
+                    SessionManager.init(context)
+                    SessionManager.login(token, role)
+
+                    onLoginSuccess(role)
+                    errorMessage = null
+                } else {
+                    errorMessage = "Login successful, but token or role was null."
+                }
             }
             is LoginUiState.Error -> {
-                showError = true
+                errorMessage = state.message
             }
             else -> {
-                // Idle or Loading
+                // Idle or Loading, do nothing
             }
         }
     }
@@ -53,7 +84,8 @@ fun LoginScreen(
                 value = email,
                 onValueChange = { email = it },
                 label = { Text("Email") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                isError = errorMessage != null
             )
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -61,13 +93,15 @@ fun LoginScreen(
                 value = password,
                 onValueChange = { password = it },
                 label = { Text("Password") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                visualTransformation = PasswordVisualTransformation(),
+                isError = errorMessage != null
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (showError) {
+            errorMessage?.let {
                 Text(
-                    text = "Login failed. Please check your credentials.",
+                    text = it,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
@@ -75,13 +109,13 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    loginViewModel.loginUser(email, password)
+                    loginViewModel.login(LoginRequest(email, password))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = loginState !is LoginUiState.Loading
             ) {
                 if (loginState is LoginUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
                     Text("Login")
                 }

@@ -1,11 +1,14 @@
 package com.example.uas.model
 
-// Cetak biru untuk semua jenis pengguna
+import com.squareup.moshi.Json
+
 data class User(
+    @Json(name = "id")
+    val id: Long,
+    @Json(name = "name")
     val name: String,
+    @Json(name = "email")
     val email: String,
-    val role: String,
-    // Properti opsional (bisa null) yang mungkin hanya dimiliki oleh peran tertentu
-    val nim: String? = null,    // Hanya untuk mahasiswa
-    val nip: String? = null,    // Hanya untuk kemahasiswaan/admin
+    @Json(name = "role")
+    val role: String
 )
