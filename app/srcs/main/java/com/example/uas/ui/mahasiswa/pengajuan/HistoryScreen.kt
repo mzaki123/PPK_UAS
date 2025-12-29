@@ -18,7 +18,6 @@ import androidx.navigation.compose.rememberNavController
 import com.example.uas.model.Pengajuan
 import com.example.uas.ui.mahasiswa.HistoryUiState
 import com.example.uas.ui.mahasiswa.MahasiswaViewModel
-import com.example.uas.ui.navigation.Routes
 import com.example.uas.ui.theme.UASTheme
 
 @Composable
@@ -35,16 +34,8 @@ fun HistoryScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Text(
-            text = "Riwayat Pengajuan",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(16.dp)
-        )
-
-        LazyRow(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Text("Riwayat Pengajuan", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
+        LazyRow(modifier = Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(filters) { filter ->
                 FilterChip(
                     selected = selectedFilter == filter,
@@ -53,15 +44,10 @@ fun HistoryScreen(
                 )
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
 
         when (val state = historyState) {
-            is HistoryUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
+            is HistoryUiState.Loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             is HistoryUiState.Success -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
@@ -75,14 +61,11 @@ fun HistoryScreen(
                     }
                 }
             }
-            is HistoryUiState.Error -> {
-                Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
-            }
+            is HistoryUiState.Error -> Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
             else -> {}
         }
     }
 }
-
 
 @Composable
 fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
@@ -92,13 +75,10 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = pengajuan.tanggalPengajuan, fontSize = 12.sp, color = Color.Gray)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(pengajuan.tanggalPengajuan, fontSize = 12.sp, color = Color.Gray)
                 Text(
-                    text = pengajuan.status,
+                    pengajuan.status,
                     color = when (pengajuan.status.uppercase()) {
                         "DITERIMA", "SELESAI" -> Color(0xFF66BB6A)
                         "DIAJUKAN" -> Color(0xFFFFA726)
@@ -109,14 +89,12 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = pengajuan.tujuanSurat, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(pengajuan.tujuanSurat, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
-                onClick = { /* TODO: Navigate to a real detail screen if available */ },
+                onClick = { /* TODO */ },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = "Lihat Detail")
-            }
+            ) { Text("Lihat Detail") }
         }
     }
 }
@@ -125,6 +103,7 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
 @Composable
 fun HistoryScreenPreview() {
     UASTheme {
-        // This preview will be static as it doesn't have a real ViewModel
+        val pengajuan = Pengajuan(1, "Surat Keterangan Aktif", "24 Okt 2023", "Diterima", "Budi", "123")
+        PengajuanCard(pengajuan = pengajuan, navController = rememberNavController())
     }
 }

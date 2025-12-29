@@ -39,4 +39,10 @@ interface ApiService {
 
     @GET("pengajuan/{id}")
     suspend fun getPengajuanById(@Path("id") pengajuanId: Long): Response<com.example.uas.model.Pengajuan>
+
+    @POST("pengajuan")
+    suspend fun createPengajuan(@Body request: com.example.uas.model.request.CreatePengajuanRequest): Response<Unit>
+
+    @GET("pengajuan")
+    suspend fun getMyPengajuan(): Response<List<com.example.uas.model.Pengajuan>>
 }
