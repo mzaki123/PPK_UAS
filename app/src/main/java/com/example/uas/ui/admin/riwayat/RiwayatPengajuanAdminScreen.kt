@@ -213,7 +213,6 @@ fun PengajuanItem(pengajuan: Pengajuan, modifier: Modifier = Modifier) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    color = Color.Gray
                 ) {
                     Icon(
                         imageVector = Icons.Default.CalendarToday,
