@@ -24,29 +24,33 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uas.data.repository.UserRepository
 import com.example.uas.model.User
+import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.theme.UASTheme
 
 val filters = listOf("Semua", "Mahasiswa", "Kemahasiswaan", "Admin")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManajemenUserScreen(
-    userViewModel: UserViewModel,
-    onUserClick: (Long) -> Unit
-) {
+fun ManajemenUserScreen(onUserClick: (Long) -> Unit = {}) {
+    val viewModelFactory = remember {
+        object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return UserViewModel(UserRepository(RetrofitInstance.api)) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    }
+    val userViewModel: UserViewModel = viewModel(factory = viewModelFactory)
     val userState by userViewModel.userState.collectAsState()
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Semua") }
-
-    // Update ViewModel when search query or filter changes
-    LaunchedEffect(searchQuery) {
-        userViewModel.setSearchQuery(searchQuery)
-    }
-    LaunchedEffect(selectedFilter) {
-        userViewModel.setSelectedFilter(selectedFilter)
-    }
 
     LaunchedEffect(Unit) {
         userViewModel.getAllUsers()
@@ -100,28 +104,18 @@ fun ManajemenUserScreen(
             when (val state = userState) {
                 is UserUiState.Loading -> {
                     item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             CircularProgressIndicator()
                         }
                     }
                 }
                 is UserUiState.Success -> {
-                    if (state.users.isEmpty()) {
-                        item {
-                            Text(
-                                text = "Tidak ada pengguna yang cocok ditemukan.",
-                                modifier = Modifier.padding(16.dp),
-                                color = Color.Gray
-                            )
-                        }
-                    } else {
-                        items(state.users) { user ->
-                            UserListItem(
-                                user = user,
-                                onClick = { onUserClick(user.id) },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                            )
-                        }
+                    items(state.users) { user ->
+                        UserListItem(
+                            user = user,
+                            onClick = { onUserClick(user.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
                     }
                 }
                 is UserUiState.Error -> {
@@ -221,10 +215,10 @@ fun UserListItem(user: User, onClick: () -> Unit, modifier: Modifier = Modifier)
 
 @Composable
 fun RoleBadge(role: String) {
-    val (backgroundColor, textColor) = when (role.uppercase()) {
-        "MAHASISWA" -> Color(0xFFEFF6FF) to Color(0xFF2563EB)
-        "KEMAHASISWAAN" -> Color(0xFFF5F3FF) to Color(0xFF7C3AED)
-        "ADMIN" -> Color(0xFFFFF7ED) to Color(0xFFEA580C)
+    val (backgroundColor, textColor) = when (role) {
+        "Mahasiswa" -> Color(0xFFEFF6FF) to Color(0xFF2563EB)
+        "Kemahasiswaan" -> Color(0xFFF5F3FF) to Color(0xFF7C3AED)
+        "Admin" -> Color(0xFFFFF7ED) to Color(0xFFEA580C)
         else -> Color(0xFFF1F5F9) to Color(0xFF475569)
     }
 
@@ -242,8 +236,13 @@ fun RoleBadge(role: String) {
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun ManajemenUserScreenPreview() {
-    UASTheme {}
+    UASTheme {
+       // Mock data for preview
+        val users = listOf(User(1, "Ahmad Santoso", "ahmad@student.univ.ac.id", "Mahasiswa"))
+        // You can create a mock ViewModel or pass the state directly for preview
+    }
 }

@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -19,86 +19,81 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.uas.data.repository.DashboardRepository
+import com.example.uas.model.response.DashboardStatsResponse
+import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.theme.UASTheme
 
 @Composable
 fun AdminDashboardScreen() {
+    val viewModelFactory = remember {
+        object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(DashboardViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    return DashboardViewModel(DashboardRepository(RetrofitInstance.api)) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    }
+    val dashboardViewModel: DashboardViewModel = viewModel(factory = viewModelFactory)
+    val dashboardState by dashboardViewModel.dashboardState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        dashboardViewModel.getDashboardStats()
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
-        // The main content is in a LazyColumn
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF6F6F8)),
+            modifier = Modifier.fillMaxSize().background(Color(0xFFF6F6F8)),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
-            // Header is placed as a regular item
             item {
-                DashboardHeader()
+                when (val state = dashboardState) {
+                    is DashboardUiState.Loading -> Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    is DashboardUiState.Success -> DashboardHeader(state.stats)
+                    is DashboardUiState.Error -> Text(state.message, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                    else -> {} // Idle
+                }
             }
 
-            // Recent Activity Section
             item {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp),
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Recent Activity",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF314158)
-                    )
+                    Text("Recent Activity", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF314158))
                     TextButton(onClick = { /*TODO*/ }) {
                         Text("See All", color = Color(0xFF026AA1), fontWeight = FontWeight.Medium)
                     }
                 }
             }
             items(recentActivities) { activity ->
-                RecentActivityItem(
-                    activity = activity,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
-                )
+                RecentActivityItem(activity = activity, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             }
         }
     }
 }
 
 @Composable
-fun DashboardHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF6F6F8))
-    ) {
-        // Blue background part
+fun DashboardHeader(stats: DashboardStatsResponse) {
+    Box(modifier = Modifier.fillMaxWidth().background(Color(0xFFF6F6F8))) {
         Column {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .background(
-                        color = Color(0xFF314158),
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    )
+                modifier = Modifier.fillMaxWidth().height(200.dp).background(
+                    color = Color(0xFF314158),
+                    shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                )
             )
-            // Spacer for the area below the blue background
             Spacer(modifier = Modifier.height(80.dp))
         }
 
-        // Content on top of the background
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-        ) {
-            // Welcome text and profile icon
+        Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 48.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 48.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -107,37 +102,23 @@ fun DashboardHeader() {
                     Text("Admin Panel", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f)),
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color.White
-                    )
+                    Icon(Icons.Default.Person, "Profile", tint = Color.White)
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Stats section
-            Text(
-                "Statistik",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Text("Statistik", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Total Users", "1,240", Icons.Default.Group, Modifier.weight(1f))
-                    StatCard("Mahasiswa", "1,200", Icons.Default.School, Modifier.weight(1f))
+                    StatCard("Total Users", stats.totalUsers.toString(), Icons.Default.Group, Modifier.weight(1f))
+                    StatCard("Mahasiswa", stats.mahasiswa.toString(), Icons.Default.School, Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Kemahasiswaan", "35", Icons.Default.LocalPolice, Modifier.weight(1f))
-                    StatCard("Pengajuan", "450", Icons.Default.Description, Modifier.weight(1f))
+                    StatCard("Kemahasiswaan", stats.kemahasiswaan.toString(), Icons.Default.LocalPolice, Modifier.weight(1f))
+                    StatCard("Pengajuan", stats.pengajuan.toString(), Icons.Default.Description, Modifier.weight(1f))
                 }
             }
         }
@@ -156,12 +137,10 @@ fun StatCard(title: String, value: String, icon: ImageVector, modifier: Modifier
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier
-                        .size(32.dp)
-                        .background(Color(0xFFE3F2FD), RoundedCornerShape(8.dp)),
+                    Modifier.size(32.dp).background(Color(0xFFE3F2FD), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = title, tint = Color(0xFF026AA1), modifier = Modifier.size(20.dp))
+                    Icon(icon, title, tint = Color(0xFF026AA1), modifier = Modifier.size(20.dp))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(title, color = Color(0xFF64748B), fontSize = 12.sp, fontWeight = FontWeight.Medium)
@@ -198,12 +177,10 @@ fun RecentActivityItem(activity: Activity, modifier: Modifier = Modifier) {
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier
-                    .size(40.dp)
-                    .background(activity.iconBgColor, CircleShape),
+                Modifier.size(40.dp).background(activity.iconBgColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(activity.icon, contentDescription = activity.title, tint = activity.iconColor, modifier = Modifier.size(20.dp))
+                Icon(activity.icon, activity.title, tint = activity.iconColor, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
