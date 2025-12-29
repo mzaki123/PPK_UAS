@@ -82,5 +82,13 @@ fun AppNavigation() {
             )
         }
 
+        composable(Graph.ADMIN) {
+            AdminNavigation(onLogout = {
+                SessionManager.logout()
+                navController.navigate(Graph.AUTHENTICATION) {
+                    popUpTo(Graph.ADMIN) { inclusive = true }
+                }
+            })
+        }
     }
 }

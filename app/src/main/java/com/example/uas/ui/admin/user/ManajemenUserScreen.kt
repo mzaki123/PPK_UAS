@@ -1,6 +1,8 @@
 package com.example.uas.ui.admin.user
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -10,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,62 +24,105 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.uas.ui.theme.UASTheme
 
-// Corrected data class, removing imageUrl
-data class UserDisplay(
+// Data models remain the same
+data class User(
     val name: String,
     val email: String,
     val role: String,
-    val status: String
 )
 
-val userList = listOf(
-    UserDisplay("Ahmad Santoso", "ahmad@student.univ.ac.id", "Mahasiswa", "Aktif"),
-    UserDisplay("Dr. Budi Raharjo", "budi@staff.univ.ac.id", "Kemahasiswaan", "Aktif"),
-    UserDisplay("Siti Aminah", "admin.siti@univ.ac.id", "Admin", "Nonaktif"),
-    UserDisplay("Doni Pratama", "doni.p@student.univ.ac.id", "Mahasiswa", "Nonaktif")
+val users = listOf(
+    User("Ahmad Santoso", "ahmad@student.univ.ac.id", "Mahasiswa"),
+    User("Dr. Budi Raharjo", "budi@staff.univ.ac.id", "Kemahasiswaan"),
+    User("Siti Aminah", "admin.siti@univ.ac.id", "Admin"),
+    User("Doni Pratama", "doni.p@student.univ.ac.id", "Mahasiswa"),
 )
+
+val filters = listOf("Semua", "Mahasiswa", "Kemahasiswaan", "Admin")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ManajemenUserScreen() {
+fun ManajemenUserScreen(onUserClick: (String) -> Unit = {}) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedFilter by remember { mutableStateOf("Semua") }
+
     Scaffold(
         topBar = { ManajemenUserTopAppBar() },
         containerColor = Color(0xFFF6F6F8)
     ) { paddingValues ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+            modifier = Modifier.padding(paddingValues),
             contentPadding = PaddingValues(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { SearchAndFilterSection() }
-            items(userList) { user ->
-                UserListItem(user = user, modifier = Modifier.padding(horizontal = 16.dp))
+            // Search Bar
+            item {
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Cari nama atau email...", color = Color(0xFF9CA3AF)) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search", tint = Color(0xFF4C669A)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent
+                    )
+                )
+            }
+
+            // Filter Chips
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filters) { filter ->
+                        FilterChip(
+                            selected = selectedFilter == filter,
+                            onClick = { selectedFilter = filter },
+                            label = { Text(filter) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Color(0xFF026AA1),
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Spacer item
+            item {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            // User List
+            items(users) { user ->
+                UserListItem(
+                    user = user,
+                    onClick = { onUserClick(user.name) },
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
         }
     }
 }
 
+// TopAppBar, UserListItem, and RoleBadge composables remain the same
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManajemenUserTopAppBar() {
     TopAppBar(
-        title = {
-            Text(
-                "Manajemen User",
-                color = Color.White,
-                fontWeight = FontWeight.Bold
-            )
-        },
+        title = { Text("Manajemen User", color = Color.White, fontWeight = FontWeight.Bold) },
         actions = {
             IconButton(onClick = { /* TODO: Add user */ }) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Add User",
-                    tint = Color.White
-                )
+                Icon(Icons.Default.Add, contentDescription = "Add User", tint = Color.White)
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -86,127 +132,84 @@ fun ManajemenUserTopAppBar() {
 }
 
 @Composable
-fun SearchAndFilterSection() {
-    var searchQuery by remember { mutableStateOf("") }
-    val filters = listOf("Semua", "Mahasiswa", "Kemahasiswaan", "Admin")
-    var selectedFilter by remember { mutableStateOf("Semua") }
-
-    Column(modifier = Modifier.padding(bottom = 8.dp)) {
-        // Search Bar
-        TextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Cari nama atau email...", color = Color.Gray) },
-            leadingIcon = {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search Icon"
-                )
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = TextFieldDefaults.colors(
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent,
-                disabledIndicatorColor = Color.Transparent
-            )
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Filter Chips
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(filters) { filter ->
-                FilterChip(
-                    selected = selectedFilter == filter,
-                    onClick = { selectedFilter = filter },
-                    label = { Text(filter) },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun UserListItem(user: UserDisplay, modifier: Modifier = Modifier) {
+fun UserListItem(user: User, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
-                    // Avatar
                     Box(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color.LightGray)
-                    )
+                            .background(Color(0xFFF1F5F9))
+                            .border(1.dp, Color(0xFFE2E8F0), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "User Avatar",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = user.name,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
-                            color = Color.Black
+                            color = Color(0xFF0D121B)
                         )
                         Text(
                             text = user.email,
                             fontSize = 14.sp,
-                            color = Color.Gray
+                            color = Color(0xFF4C669A)
                         )
                     }
                 }
-                IconButton(
-                    onClick = { /* TODO: More options */ },
-                    modifier = Modifier.size(24.dp)
-                ) {
+                IconButton(onClick = { /* TODO: More options */ }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "More Options",
-                        tint = Color.Gray
+                        tint = Color(0xFF9CA3AF)
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                UserTag(
-                    text = user.role,
-                    backgroundColor = Color(0xFFE0E7FF),
-                    textColor = Color(0xFF4338CA)
-                )
-                UserTag(
-                    text = user.status,
-                    backgroundColor = if (user.status == "Aktif") Color(0xFFD1FAE5) else Color(0xFFF3F4F6),
-                    textColor = if (user.status == "Aktif") Color(0xFF065F46) else Color(0xFF4B5563)
-                )
-            }
+            RoleBadge(role = user.role)
         }
     }
 }
 
 @Composable
-fun UserTag(text: String, backgroundColor: Color, textColor: Color) {
+fun RoleBadge(role: String) {
+    val (backgroundColor, textColor) = when (role) {
+        "Mahasiswa" -> Color(0xFFEFF6FF) to Color(0xFF2563EB)
+        "Kemahasiswaan" -> Color(0xFFF5F3FF) to Color(0xFF7C3AED)
+        "Admin" -> Color(0xFFFFF7ED) to Color(0xFFEA580C)
+        else -> Color(0xFFF1F5F9) to Color(0xFF475569)
+    }
+
     Box(
         modifier = Modifier
-            .background(backgroundColor, RoundedCornerShape(8.dp))
+            .background(backgroundColor, RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
-            text = text,
+            text = role,
             color = textColor,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
@@ -214,8 +217,11 @@ fun UserTag(text: String, backgroundColor: Color, textColor: Color) {
     }
 }
 
+
 @Preview(showBackground = true)
 @Composable
 fun ManajemenUserScreenPreview() {
-    ManajemenUserScreen()
+    UASTheme {
+        ManajemenUserScreen()
+    }
 }
