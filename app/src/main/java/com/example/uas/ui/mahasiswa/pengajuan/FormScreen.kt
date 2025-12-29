@@ -1,4 +1,4 @@
-package com.example.uas.ui.screens
+package com.example.uas.ui.mahasiswa.pengajuan
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -18,13 +18,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.uas.ui.mahasiswa.CreatePengajuanUiState
+import com.example.uas.ui.mahasiswa.MahasiswaViewModel
 import com.example.uas.ui.theme.UASTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormScreen(navController: NavController) {
+fun FormScreen(
+    navController: NavController,
+    viewModel: MahasiswaViewModel
+) {
     var tujuan by remember { mutableStateOf("") }
-    val uploadedFiles = remember { mutableStateListOf("KTM_Mahasiswa_2024.pdf") }
+    val createState by viewModel.createState.collectAsState()
+
+    LaunchedEffect(createState) {
+        if (createState is CreatePengajuanUiState.Success) {
+            viewModel.resetCreateState() // Reset state to avoid re-triggering
+            navController.popBackStack()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -38,16 +50,17 @@ fun FormScreen(navController: NavController) {
             )
         },
         bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Button(
-                    onClick = { /*TODO*/ },
-                    modifier = Modifier.fillMaxWidth()
+                    onClick = { viewModel.createPengajuan(tujuan) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = tujuan.isNotBlank() && createState !is CreatePengajuanUiState.Loading
                 ) {
-                    Text(text = "Ajukan Permohonan")
+                    if (createState is CreatePengajuanUiState.Loading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    } else {
+                        Text(text = "Ajukan Permohonan")
+                    }
                 }
                 TextButton(
                     onClick = { navController.popBackStack() },
@@ -65,86 +78,36 @@ fun FormScreen(navController: NavController) {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Info,
-                        contentDescription = "Info Icon",
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    Icon(Icons.Default.Info, "Info Icon", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "Pastikan data diri Anda di profil sudah benar sebelum mengajukan surat.",
-                        fontSize = 14.sp
-                    )
+                    Text("Pastikan data diri Anda di profil sudah benar sebelum mengajukan surat.", fontSize = 14.sp)
                 }
             }
 
-            // Tujuan Surat
             OutlinedTextField(
                 value = tujuan,
                 onValueChange = { tujuan = it },
                 label = { Text("Jelaskan keperluan pengajuan surat...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(150.dp)
+                modifier = Modifier.fillMaxWidth().height(150.dp)
             )
 
-            // File Pendukung
-            Text(text = "File Pendukung", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text("File Pendukung (Opsional)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .dashedBorder(1.dp, Color.Gray, 8.dp)
-                    .padding(16.dp),
+                modifier = Modifier.fillMaxWidth().dashedBorder(1.dp, Color.Gray, 8.dp).padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.CloudUpload, contentDescription = "Upload Icon", tint = Color.Gray)
-                    Text(text = "Tap to upload", color = Color.Gray)
+                    Icon(Icons.Default.CloudUpload, "Upload Icon", tint = Color.Gray)
+                    Text("Tap to upload", color = Color.Gray)
                 }
-            }
-
-            // Uploaded Files
-            if (uploadedFiles.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = "Uploaded Files (${uploadedFiles.size})", fontSize = 12.sp, color = Color.Gray)
-                uploadedFiles.forEach { fileName ->
-                    UploadedFileItem(fileName = fileName, onRemove = { uploadedFiles.remove(fileName) })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun UploadedFileItem(fileName: String, onRemove: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Icon", tint = Color.Red)
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(text = fileName, modifier = Modifier.weight(1f))
-            IconButton(onClick = onRemove) {
-                Icon(Icons.Default.Close, contentDescription = "Remove File")
             }
         }
     }
@@ -166,6 +129,6 @@ fun Modifier.dashedBorder(width: Dp, color: Color, cornerRadius: Dp) = this.draw
 @Composable
 fun FormScreenPreview() {
     UASTheme {
-        FormScreen(rememberNavController())
+        // FormScreen(rememberNavController(), /* viewModel needed */)
     }
 }
