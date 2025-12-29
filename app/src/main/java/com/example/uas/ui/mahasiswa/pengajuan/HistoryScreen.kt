@@ -26,10 +26,9 @@ import com.example.uas.ui.navigation.Routes
 @Composable
 fun HistoryScreen(navController: NavController) {
     val pengajuanList = listOf(
-        Pengajuan("1", "Surat Keterangan Aktif Kuliah", "24 Okt 2023", "Diterima", "Keperluan beasiswa Djarum Plus..."),
-        Pengajuan("2", "Surat Izin Cuti Akademik", "20 Sep 2023", "Diajukan", "Alasan kesehatan yang mendesak..."),
-        Pengajuan("3", "Surat Rekomendasi Beasiswa", "15 Sep 2023", "Ditolak", "Pengajuan untuk program pertukaran..."),
-        Pengajuan("4", "Surat Pengantar Magang", "10 Sep 2023", "Diajukan", "Permohonan surat pengantar untuk magang...")
+        Pengajuan(id = 1L, tujuanSurat = "Surat Keterangan Aktif Kuliah", tanggalPengajuan = "24 Okt 2023", status = "Diterima", mahasiswaNama = "Ahmad Dahlan", mahasiswaNim = "21041001"),
+        Pengajuan(id = 2L, tujuanSurat = "Surat Izin Cuti Akademik", tanggalPengajuan = "20 Sep 2023", status = "Diajukan", mahasiswaNama = "Ahmad Dahlan", mahasiswaNim = "21041001"),
+        Pengajuan(id = 3L, tujuanSurat = "Surat Rekomendasi Beasiswa", tanggalPengajuan = "15 Sep 2023", status = "Ditolak", mahasiswaNama = "Ahmad Dahlan", mahasiswaNim = "21041001")
     )
     var selectedFilter by remember { mutableStateOf("Semua") }
     val filters = listOf("Semua", "Diajukan", "Diterima", "Ditolak")
@@ -97,7 +96,7 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = pengajuan.date, fontSize = 12.sp, color = Color.Gray)
+                Text(text = pengajuan.tanggalPengajuan, fontSize = 12.sp, color = Color.Gray)
                 Text(
                     text = pengajuan.status,
                     color = when (pengajuan.status) {
@@ -110,9 +109,8 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = pengajuan.title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = pengajuan.tujuanSurat, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = pengajuan.description, fontSize = 14.sp, color = Color.Gray, maxLines = 2)
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
                 onClick = { navController.navigate(Routes.DETAIL) },

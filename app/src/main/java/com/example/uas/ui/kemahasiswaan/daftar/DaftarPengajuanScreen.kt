@@ -27,32 +27,28 @@ import com.example.uas.ui.theme.UASTheme
 
 val dummyPengajuanList = listOf(
     Pengajuan(
-        id = "1",
-        title = "Surat Keterangan Aktif",
-        date = "12 Okt 2023 • 09:30 WIB",
-        status = "Diajukan",
-        description = "Budi Santoso (21000123)" // Kita gabungkan info nama/nim di deskripsi
+        id = 1L,
+        mahasiswaNama = "Budi Santoso",
+        mahasiswaNim = "21000123",
+        tujuanSurat = "Surat Keterangan Aktif",
+        tanggalPengajuan = "12 Okt 2023 • 09:30 WIB",
+        status = "Diajukan"
     ),
     Pengajuan(
-        id = "2",
-        title = "Surat Pengantar Magang",
-        date = "13 Okt 2023 • 14:15 WIB",
-        status = "Diajukan",
-        description = "Rina Hartati (21000882)"
+        id = 2L,
+        mahasiswaNama = "Rina Hartati",
+        mahasiswaNim = "21000882",
+        tujuanSurat = "Surat Pengantar Magang",
+        tanggalPengajuan = "13 Okt 2023 • 14:15 WIB",
+        status = "Diajukan"
     ),
     Pengajuan(
-        id = "3",
-        title = "Surat Keterangan Lulus",
-        date = "10 Okt 2023 • 11:20 WIB",
-        status = "Diterima",
-        description = "Ahmad Fauzi (21000456)"
-    ),
-    Pengajuan(
-        id = "4",
-        title = "Surat Izin Penelitian",
-        date = "09 Okt 2023 • 08:00 WIB",
-        status = "Ditolak",
-        description = "Siti Aminah (21000567)"
+        id = 4L,
+        mahasiswaNama = "Siti Aminah",
+        mahasiswaNim = "21000567",
+        tujuanSurat = "Surat Izin Penelitian",
+        tanggalPengajuan = "09 Okt 2023 • 08:00 WIB",
+        status = "Ditolak"
     )
 )
 
@@ -75,7 +71,7 @@ fun DaftarPengajuanScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(dummyPengajuanList.filter {
-                (it.title.contains(searchQuery, ignoreCase = true)) && // Ganti pencarian berdasarkan title
+                (it.tujuanSurat.contains(searchQuery, ignoreCase = true)) && // Ganti pencarian berdasarkan title
                         (selectedFilter == "Semua" || it.status == selectedFilter)
             }) { pengajuan ->
                 // 4. BERIKAN NavController KE KARTU PENGAJUAN
@@ -166,8 +162,7 @@ fun PengajuanCard(pengajuan: Pengajuan,navController: NavController) {
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column {
-                            Text(pengajuan.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                            Text(pengajuan.description, fontSize = 12.sp, color = Color.Gray, maxLines = 1)
+                            Text(pengajuan.tujuanSurat, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                         }
                        StatusBadge(status = pengajuan.status)
                     }
@@ -175,7 +170,7 @@ fun PengajuanCard(pengajuan: Pengajuan,navController: NavController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CalendarToday, contentDescription = "Tanggal", modifier = Modifier.size(14.dp), tint = Color.Gray)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(pengajuan.date, fontSize = 12.sp, color = Color.Gray)
+                        Text(pengajuan.tanggalPengajuan, fontSize = 12.sp, color = Color.Gray)
                     }
                 }
             }
