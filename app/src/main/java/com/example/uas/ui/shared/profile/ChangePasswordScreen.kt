@@ -93,7 +93,7 @@ fun ChangePasswordScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Gunakan password yang kuat untuk menjaga keamanan akun SIAKTIF kamu lur.",
+                "Gunakan password yang kuat untuk menjaga keamanan akun SIAKTIF kamu.",
                 fontSize = 14.sp,
                 color = Color.Gray
             )

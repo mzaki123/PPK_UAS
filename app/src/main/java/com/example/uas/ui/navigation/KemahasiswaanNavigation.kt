@@ -26,6 +26,8 @@ import com.example.uas.ui.shared.profile.ChangePasswordScreen
 import com.example.uas.ui.shared.profile.EditProfileScreen
 import com.example.uas.ui.shared.profile.EditProfileViewModel
 import com.example.uas.ui.shared.profile.ProfileScreen
+import com.example.uas.ui.shared.profile.ChangePasswordScreen
+
 
 @Composable
 fun KemahasiswaanNavigation(

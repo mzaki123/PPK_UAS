@@ -21,20 +21,37 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.uas.data.SessionManager
+import com.example.uas.data.repository.ProfileRepository
+import com.example.uas.model.KemahasiswaanDto
+import com.example.uas.model.MahasiswaDto
+import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.navigation.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    viewModel: EditProfileViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return EditProfileViewModel(ProfileRepository(RetrofitInstance.api)) as T
+            }
+        }
+    )
 ) {
-    // 1. Ambil data Role secara reaktif dari SessionManager
-    val userRole = remember { SessionManager.getRole()?.uppercase() ?: "USER" }
 
+    val userState by viewModel.userState.collectAsState()
     var showLogoutDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.fetchProfile()
+    }
 
     Scaffold(
         topBar = {
@@ -59,44 +76,23 @@ fun ProfileScreen(
                     .padding(vertical = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFF1F5F9)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(56.dp),
-                            tint = Color(0xFF94A3B8)
-                        )
+                when (val state = userState) {
+                    is FetchProfileUiState.Loading -> {
+                        CircularProgressIndicator() // Tampilkan loading
                     }
-                    Spacer(Modifier.height(16.dp))
-
-                    // Nama adaptif
-                    Text(
-                        text = if (userRole == "MAHASISWA") "Mahasiswa Aktif" else "Staff / Admin",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF314158)
-                    )
-
-                    // Badge Role
-                    Surface(
-                        color = Color(0xFF026AA1).copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Text(
-                            text = userRole,
-                            color = Color(0xFF026AA1),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                        )
+                    is FetchProfileUiState.Success -> {
+                        // Jika sukses, tampilkan data asli
+                        val userData = state.data
+                        val (nama, role) = when (userData) {
+                            is MahasiswaDto -> userData.nama to "MAHASISWA"
+                            is KemahasiswaanDto -> userData.nama to "KEMAHASISWAAN"
+                            else -> "Pengguna" to "USER"
+                        }
+                        ProfileHeaderContent(name = nama, role = role)
+                    }
+                    is FetchProfileUiState.Error -> {
+                        // Jika error, tampilkan pesan error atau default
+                        ProfileHeaderContent(name = "Gagal Memuat", role = "Error")
                     }
                 }
             }
@@ -108,7 +104,7 @@ fun ProfileScreen(
                     icon = Icons.Default.Badge,
                     title = "Detail Informasi",
                     subtitle = "Lihat NIK, NIM, atau NIP Anda",
-                    onClick = { /* Navigasi ke detail jika ada */ }
+                    onClick = { navController.navigate(Routes.EDIT_PROFILE)}
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color(0xFFF1F5F9))
                 ProfileMenuItem(
@@ -122,12 +118,6 @@ fun ProfileScreen(
             // --- Menu Kelompok 2: Aplikasi ---
             ProfileSectionHeader("APLIKASI")
             ProfileMenuCard {
-                ProfileMenuItem(
-                    icon = Icons.Default.Settings,
-                    title = "Pengaturan",
-                    subtitle = "Bahasa dan Notifikasi",
-                    onClick = { /* TODO */ }
-                )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color(0xFFF1F5F9))
                 ProfileMenuItem(
                     icon = Icons.AutoMirrored.Filled.Logout,
@@ -175,6 +165,48 @@ fun ProfileScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun ProfileHeaderContent(name: String, role: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFF1F5F9)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = Color(0xFF94A3B8)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = name,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF314158)
+        )
+
+        Surface(
+            color = Color(0xFF026AA1).copy(alpha = 0.1f),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.padding(top = 8.dp)
+        ) {
+            Text(
+                text = role,
+                color = Color(0xFF026AA1),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
     }
 }
 
