@@ -1,39 +1,41 @@
-package com.example.uas.ui.mahasiswa.pengajuan
+package com.example.uas.ui.mahasiswa.form
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.uas.ui.mahasiswa.CreatePengajuanUiState
 import com.example.uas.ui.mahasiswa.MahasiswaViewModel
-import com.example.uas.ui.theme.UASTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FormScreen(
+fun FormPengajuanScreen(
     navController: NavController,
     viewModel: MahasiswaViewModel
 ) {
     var tujuan by remember { mutableStateOf("") }
     val createState by viewModel.createState.collectAsState()
 
+    // Handle navigasi balik saat sukses kirim
     LaunchedEffect(createState) {
         if (createState is CreatePengajuanUiState.Success) {
-            viewModel.resetCreateState() // Reset state to avoid re-triggering
+            viewModel.resetCreateState() // Reset state agar tidak loop
             navController.popBackStack()
         }
     }
@@ -41,32 +43,44 @@ fun FormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Form Pengajuan Surat") },
+                title = { Text("Form Pengajuan Surat", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         },
         bottomBar = {
-            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                Button(
-                    onClick = { viewModel.createPengajuan(tujuan) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = tujuan.isNotBlank() && createState !is CreatePengajuanUiState.Loading
-                ) {
-                    if (createState is CreatePengajuanUiState.Loading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Text(text = "Ajukan Permohonan")
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shadowElevation = 8.dp,
+                color = Color.White
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Button(
+                        onClick = { viewModel.createPengajuan(tujuan) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF026AA1)),
+                        enabled = tujuan.isNotBlank() && createState !is CreatePengajuanUiState.Loading
+                    ) {
+                        if (createState is CreatePengajuanUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        } else {
+                            Text(text = "Ajukan Permohonan", fontWeight = FontWeight.Bold)
+                        }
                     }
-                }
-                TextButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Batal")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(text = "Batal", color = Color.Gray)
+                    }
                 }
             }
         }
@@ -75,60 +89,121 @@ fun FormScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .background(Color(0xFFF8F9FA))
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // Card Informasi
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f))
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F2FE))
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Info, "Info Icon", tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(48.dp))
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Info",
+                        tint = Color(0xFF026AA1),
+                        modifier = Modifier.size(40.dp)
+                    )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text("Pastikan data diri Anda di profil sudah benar sebelum mengajukan surat.", fontSize = 14.sp)
+                    Text(
+                        text = "Pastikan data diri Anda di profil sudah benar sebelum mengajukan surat untuk menghindari kesalahan data.",
+                        fontSize = 13.sp,
+                        color = Color(0xFF026AA1),
+                        lineHeight = 18.sp
+                    )
                 }
             }
 
-            OutlinedTextField(
-                value = tujuan,
-                onValueChange = { tujuan = it },
-                label = { Text("Jelaskan keperluan pengajuan surat...") },
-                modifier = Modifier.fillMaxWidth().height(150.dp)
-            )
+            // Input Tujuan
+            Column {
+                Text(
+                    text = "Tujuan Pengajuan",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF314158)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = tujuan,
+                    onValueChange = { tujuan = it },
+                    placeholder = { Text("Jelaskan keperluan pengajuan surat (Contoh: Syarat Beasiswa, BPJS)...") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF026AA1),
+                        unfocusedBorderColor = Color(0xFFE2E8F0),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White
+                    )
+                )
+            }
 
-            Text("File Pendukung (Opsional)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Box(
-                modifier = Modifier.fillMaxWidth().dashedBorder(1.dp, Color.Gray, 8.dp).padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.CloudUpload, "Upload Icon", tint = Color.Gray)
-                    Text("Tap to upload", color = Color.Gray)
+            // Upload Area Placeholder
+            Column {
+                Text(
+                    text = "File Pendukung (Opsional)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF314158)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .dashedBorder(1.dp, Color(0xFF94A3B8), 12.dp)
+                        .background(Color.White, RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = "Upload",
+                            tint = Color(0xFF94A3B8),
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Tap to upload dokumen (PDF/JPG)",
+                            color = Color(0xFF94A3B8),
+                            fontSize = 12.sp
+                        )
+                    }
                 }
+            }
+
+            // Error Message (Jika ada)
+            if (createState is CreatePengajuanUiState.Error) {
+                Text(
+                    text = (createState as CreatePengajuanUiState.Error).message,
+                    color = Color.Red,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
         }
     }
 }
 
+/**
+ * Extension modifier untuk membuat border putus-putus lur
+ */
 fun Modifier.dashedBorder(width: Dp, color: Color, cornerRadius: Dp) = this.drawBehind {
     val stroke = Stroke(
         width = width.toPx(),
-        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+        pathEffect = PathEffect.dashPathEffect(floatArrayOf(15f, 15f), 0f)
     )
     drawRoundRect(
         color = color,
         style = stroke,
         cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadius.toPx())
     )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun FormScreenPreview() {
-    UASTheme {
-        // FormScreen(rememberNavController(), /* viewModel needed */)
-    }
 }

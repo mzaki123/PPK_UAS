@@ -94,25 +94,23 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     }
 
     fun getUserById(userId: Long) {
-        viewModelScope.launch {
-            _userDetailState.value = UserDetailUiState.Loading
-            try {
-                val response = userRepository.getUserById(userId)
-                if (response.isSuccessful) {
-                    response.body()?.let {
-                        _userDetailState.value = UserDetailUiState.Success(it)
-                    } ?: run {
-                        _userDetailState.value = UserDetailUiState.Error("User not found")
-                    }
-                } else {
-                    _userDetailState.value = UserDetailUiState.Error("Failed to fetch user details: ${response.message()}")
-                }
-            } catch (e: Exception) {
-                _userDetailState.value = UserDetailUiState.Error("An error occurred: ${e.message}")
-            }
+        _userDetailState.value = UserDetailUiState.Loading
+
+        // Kita cari manual di list yang sudah ditarik tadi lur
+        val user = _originalUsers.find { it.id == userId }
+
+        if (user != null) {
+            // Jika ketemu, langsung set sukses
+            _userDetailState.value = UserDetailUiState.Success(user)
+        } else {
+            // Jika tidak ketemu (misal list kosong), kasih pesan error
+            _userDetailState.value = UserDetailUiState.Error("Data user tidak ditemukan di memori lokal lur!")
         }
     }
 
+    /**
+     * Fungsi hapus tetap aman karena backend punya @DeleteMapping("/users/{id}")
+     */
     fun deleteUser(userId: Long) {
         viewModelScope.launch {
             _deleteUserState.value = DeleteUserUiState.Loading
@@ -120,13 +118,13 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
                 val response = userRepository.deleteUser(userId)
                 if (response.isSuccessful) {
                     _deleteUserState.value = DeleteUserUiState.Success
-                    // Refresh the user list after deletion
+                    // Setelah hapus di server, kita tarik ulang list-nya agar sinkron
                     getAllUsers()
                 } else {
-                    _deleteUserState.value = DeleteUserUiState.Error("Failed to delete user: ${response.message()}")
+                    _deleteUserState.value = DeleteUserUiState.Error("Gagal hapus user lur")
                 }
             } catch (e: Exception) {
-                _deleteUserState.value = DeleteUserUiState.Error("An error occurred: ${e.message}")
+                _deleteUserState.value = DeleteUserUiState.Error(e.message ?: "Error")
             }
         }
     }

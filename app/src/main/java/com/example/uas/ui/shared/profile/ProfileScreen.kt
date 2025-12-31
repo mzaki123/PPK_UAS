@@ -1,130 +1,247 @@
 package com.example.uas.ui.shared.profile
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.uas.R
+import com.example.uas.data.SessionManager
 import com.example.uas.ui.navigation.Routes
-import com.example.uas.ui.theme.UASTheme
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(navController: NavController, onLogout: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = "Profil", // Generic Title
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp).align(Alignment.Start)
-        )
+fun ProfileScreen(
+    navController: NavController,
+    onLogout: () -> Unit
+) {
+    // 1. Ambil data Role secara reaktif dari SessionManager
+    val userRole = remember { SessionManager.getRole()?.uppercase() ?: "USER" }
 
-        // Profile Picture
-        Box {
-            Image(
-                painter = painterResource(id = R.drawable.avatar), // Make sure you have avatar.png in res/drawable
-                contentDescription = "Profile Picture",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = { Text("Profil Akun", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
             )
-            IconButton(
-                onClick = { /*TODO: Handle image picking*/ },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(36.dp),
-                colors = IconButtonDefaults.iconButtonColors(containerColor = MaterialTheme.colorScheme.primary)
-            ) {
-                Icon(Icons.Filled.PhotoCamera, contentDescription = "Change Profile Picture", tint = Color.White)
-            }
         }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // User Info (dibuat dummy dulu)
-        Text(text = "Nama Pengguna", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        AssistChip(onClick = { /*No-op*/ }, label = { Text("Role Pengguna") })
-        Text(text = "Detail Pengguna (NIM/NIP)", fontSize = 16.sp, color = Color.Gray)
-        Text(text = "email.pengguna@example.com", fontSize = 16.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.height(32.dp))
-
-        // Menu
-        ProfileMenuItem(icon = Icons.Filled.Edit, text = "Edit Profil", description = "Perbarui data diri anda", onClick = { navController.navigate(Routes.EDIT_PROFILE) })
-        ProfileMenuItem(icon = Icons.Filled.Lock, text = "Ganti Password", description = "Amankan akun anda", onClick = { navController.navigate(Routes.CHANGE_PASSWORD) })
-        ProfileMenuItem(icon = Icons.AutoMirrored.Filled.Help, text = "Bantuan", description = "Pusat bantuan & FAQ", onClick = { /*TODO*/ })
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Logout Button
-        OutlinedButton(
-            onClick = onLogout,
-            modifier = Modifier.fillMaxWidth()
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color(0xFFF8F9FA))
+                .verticalScroll(rememberScrollState())
         ) {
-            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout Icon", tint = Color.Red)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Logout", color = Color.Red)
+            // --- Bagian Header Profil (Adaptif berdasarkan Role) ---
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White)
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF1F5F9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(56.dp),
+                            tint = Color(0xFF94A3B8)
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+
+                    // Nama adaptif
+                    Text(
+                        text = if (userRole == "MAHASISWA") "Mahasiswa Aktif" else "Staff / Admin",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF314158)
+                    )
+
+                    // Badge Role
+                    Surface(
+                        color = Color(0xFF026AA1).copy(alpha = 0.1f),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = userRole,
+                            color = Color(0xFF026AA1),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            // --- Menu Kelompok 1: Akun ---
+            ProfileSectionHeader("PENGATURAN AKUN")
+            ProfileMenuCard {
+                ProfileMenuItem(
+                    icon = Icons.Default.Badge,
+                    title = "Detail Informasi",
+                    subtitle = "Lihat NIK, NIM, atau NIP Anda",
+                    onClick = { /* Navigasi ke detail jika ada */ }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color(0xFFF1F5F9))
+                ProfileMenuItem(
+                    icon = Icons.Default.LockReset,
+                    title = "Keamanan",
+                    subtitle = "Ganti password akun Anda",
+                    onClick = { navController.navigate(Routes.CHANGE_PASSWORD) }
+                )
+            }
+
+            // --- Menu Kelompok 2: Aplikasi ---
+            ProfileSectionHeader("APLIKASI")
+            ProfileMenuCard {
+                ProfileMenuItem(
+                    icon = Icons.Default.Settings,
+                    title = "Pengaturan",
+                    subtitle = "Bahasa dan Notifikasi",
+                    onClick = { /* TODO */ }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = Color(0xFFF1F5F9))
+                ProfileMenuItem(
+                    icon = Icons.AutoMirrored.Filled.Logout,
+                    title = "Keluar Aplikasi",
+                    subtitle = "Akhiri sesi login Anda",
+                    titleColor = Color.Red,
+                    onClick = { showLogoutDialog = true }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = "SIAKTIF v1.0.0\nPoliteknik Statistika STIS",
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+                color = Color.LightGray,
+                fontSize = 11.sp,
+                lineHeight = 16.sp
+            )
+            Spacer(modifier = Modifier.height(16.dp))
         }
-        Text(text = "Versi Aplikasi 1.0.2", fontSize = 12.sp, color = Color.Gray)
+    }
+
+    // --- Dialog Konfirmasi Logout ---
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color.Red) },
+            title = { Text("Konfirmasi Keluar", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin keluar? Anda harus login kembali untuk mengakses data.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Ya, Keluar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal", color = Color.Gray)
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun ProfileMenuItem(icon: ImageVector, text: String, description: String, onClick: () -> Unit) {
+fun ProfileSectionHeader(title: String) {
+    Text(
+        text = title,
+        modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 8.dp),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF64748B),
+        letterSpacing = 1.sp
+    )
+}
+
+@Composable
+fun ProfileMenuCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = description, fontSize = 12.sp, color = Color.Gray)
-            }
-            Icon(Icons.Filled.ChevronRight, contentDescription = "Go to $text")
-        }
-    }
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(0.5.dp),
+        content = content
+    )
 }
 
-@Preview(showBackground = true)
 @Composable
-fun ProfileScreenPreview() {
-    UASTheme {
-        ProfileScreen(rememberNavController(), onLogout = {})
+fun ProfileMenuItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    titleColor: Color = Color(0xFF1E293B),
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (titleColor == Color.Red) Color(0xFFFEF2F2) else Color(0xFFF1F5F9)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (titleColor == Color.Red) Color.Red else Color(0xFF026AA1),
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = titleColor)
+            Text(text = subtitle, fontSize = 11.sp, color = Color.Gray)
+        }
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = Color(0xFFCBD5E1),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }

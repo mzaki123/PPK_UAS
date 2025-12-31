@@ -8,36 +8,41 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.uas.data.repository.KemahasiswaanRepository
+import com.example.uas.data.repository.ProfileRepository
 import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.components.KemahasiswaanBottomNavigationBar
 import com.example.uas.ui.kemahasiswaan.KemahasiswaanViewModel
 import com.example.uas.ui.kemahasiswaan.daftar.DaftarPengajuanScreen
 import com.example.uas.ui.kemahasiswaan.detail.DetailPengajuanScreen
 import com.example.uas.ui.kemahasiswaan.home.DashboardKemahasiswaanScreen
+import com.example.uas.ui.shared.profile.ChangePasswordScreen
+import com.example.uas.ui.shared.profile.EditProfileScreen
+import com.example.uas.ui.shared.profile.EditProfileViewModel
 import com.example.uas.ui.shared.profile.ProfileScreen
 
 @Composable
-fun KemahasiswaanNavigation(appNavController: NavController, onLogout: () -> Unit) {
+fun KemahasiswaanNavigation(
+    appNavController: NavHostController, // Digunakan untuk logout ke Auth Graph
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
 
-    val viewModelFactory = remember {
-        object : androidx.lifecycle.ViewModelProvider.Factory {
+    // --- SHARED VIEWMODEL FACTORY ---
+    val kemahasiswaanViewModel: KemahasiswaanViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(KemahasiswaanViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return KemahasiswaanViewModel(KemahasiswaanRepository(RetrofitInstance.api)) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
+                @Suppress("UNCHECKED_CAST")
+                return KemahasiswaanViewModel(KemahasiswaanRepository(RetrofitInstance.api)) as T
             }
         }
-    }
-    val kemahasiswaanViewModel: KemahasiswaanViewModel = viewModel(factory = viewModelFactory)
+    )
 
     Scaffold(
         bottomBar = { KemahasiswaanBottomNavigationBar(navController = navController) }
@@ -47,22 +52,55 @@ fun KemahasiswaanNavigation(appNavController: NavController, onLogout: () -> Uni
             startDestination = Routes.KEMAHASISWAAN_DASHBOARD,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Routes.KEMAHASISWAAN_DASHBOARD) { DashboardKemahasiswaanScreen(navController) }
+            // 1. Dashboard
+            composable(Routes.KEMAHASISWAAN_DASHBOARD) {
+                DashboardKemahasiswaanScreen(
+                    navController = navController,
+                    viewModel = kemahasiswaanViewModel
+                )
+            }
+
+            // 2. Daftar Pengajuan
             composable(Routes.KEMAHASISWAAN_DAFTAR_PENGAJUAN) {
                 DaftarPengajuanScreen(
                     navController = navController,
                     viewModel = kemahasiswaanViewModel
                 )
             }
+
+            // 3. Profil Utama
             composable(Routes.KEMAHASISWAAN_PROFIL) {
                 ProfileScreen(
                     navController = navController,
                     onLogout = onLogout
                 )
             }
+
+            // --- FITUR PROFIL TAMBAHAN ---
+
+            // 4. Edit Profil (Gunakan Factory agar Repository masuk)
+            composable(Routes.EDIT_PROFILE) {
+                val editViewModel: EditProfileViewModel = viewModel(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                            return EditProfileViewModel(ProfileRepository(RetrofitInstance.api)) as T
+                        }
+                    }
+                )
+                EditProfileScreen(navController = navController, viewModel = editViewModel)
+            }
+
+            // 5. Ganti Password
+            composable(Routes.CHANGE_PASSWORD) {
+                ChangePasswordScreen(navController = navController)
+            }
+
+            // 6. Detail Pengajuan
             composable(
                 route = "${Routes.KEMAHASISWAAN_DETAIL_PENGAJUAN}/{pengajuanId}",
-                arguments = listOf(navArgument("pengajuanId") { type = NavType.LongType })
+                arguments = listOf(
+                    navArgument("pengajuanId") { type = NavType.LongType }
+                )
             ) { backStackEntry ->
                 val pengajuanId = backStackEntry.arguments?.getLong("pengajuanId") ?: 0L
                 DetailPengajuanScreen(

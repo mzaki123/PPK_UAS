@@ -1,191 +1,215 @@
-package com.example.uas.ui.screens
+package com.example.uas.ui.mahasiswa.detail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.uas.ui.theme.UASTheme
+import com.example.uas.model.Pengajuan
+import com.example.uas.ui.mahasiswa.MahasiswaViewModel
+import com.example.uas.ui.mahasiswa.PengajuanDetailUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailScreen(navController: NavController) {
+fun DetailPengajuanMahasiswaScreen(
+    navController: NavController,
+    viewModel: MahasiswaViewModel,
+    pengajuanId: Long
+) {
+    val detailState by viewModel.detailState.collectAsState()
+
+    LaunchedEffect(pengajuanId) {
+        viewModel.getPengajuanById(pengajuanId)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Pengajuan") },
+                title = { Text("Detail Pengajuan", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
-        },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Button(
-                    onClick = { /*TODO*/ },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Download, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Download Surat")
+        }
+    ) { paddingValues ->
+        when (val state = detailState) {
+            is PengajuanDetailUiState.Loading -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-                TextButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = "Kembali ke Beranda")
+            }
+            is PengajuanDetailUiState.Success -> {
+                val pengajuan = state.pengajuan
+                DetailContent(
+                    pengajuan = pengajuan,
+                    modifier = Modifier.padding(paddingValues),
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            is PengajuanDetailUiState.Error -> {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(state.message, color = Color.Red)
+                }
+            }
+            else -> {}
+        }
+    }
+}
+
+@Composable
+fun DetailContent(
+    pengajuan: Pengajuan,
+    modifier: Modifier = Modifier,
+    onBack: () -> Unit
+) {
+    val isSelesai = pengajuan.status.equals("SELESAI", ignoreCase = true)
+    val isDitolak = pengajuan.status.equals("DITOLAK", ignoreCase = true)
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // --- Status Card ---
+        val statusColor = when {
+            isSelesai -> Color(0xFF16A34A)
+            isDitolak -> Color(0xFFDC2626)
+            else -> Color(0xFFD97706)
+        }
+
+        val statusIcon = when {
+            isSelesai -> Icons.Default.CheckCircle
+            isDitolak -> Icons.Default.Cancel
+            else -> Icons.Default.PendingActions
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = statusColor.copy(alpha = 0.1f)),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(statusIcon, null, tint = statusColor, modifier = Modifier.size(48.dp))
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text("Status Pengajuan", fontSize = 12.sp, color = Color.Gray)
+                    Text(
+                        text = pengajuan.status.uppercase(),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor
+                    )
                 }
             }
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+
+        // --- Informasi Utama ---
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
-            // Status Card
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, null, tint = Color(0xFF026AA1), modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Informasi Surat", fontWeight = FontWeight.Bold)
+                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp)
+
+                InfoRow(label = "ID Pengajuan", value = "#REQ-${pengajuan.id}")
+                InfoRow(label = "Tanggal", value = pengajuan.tanggalPengajuan)
+                InfoRow(label = "Tujuan Surat", value = pengajuan.tujuanSurat)
+            }
+        }
+
+        // --- Bagian Dokumen (Jika Sudah Selesai) ---
+        if (isSelesai) {
+            Text("Surat Diterbitkan", fontWeight = FontWeight.Bold, color = Color.Gray, fontSize = 14.sp)
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF66BB6A).copy(alpha = 0.1f))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Status Icon",
-                        tint = Color(0xFF66BB6A),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(text = "Status Saat Ini", fontSize = 12.sp, color = Color.Gray)
-                        Text(text = "DITERIMA", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF66BB6A))
-                    }
-                }
-            }
-
-            // Informasi Surat Card
-            Card(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = "Info Icon")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Informasi Surat", fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Divider()
-                    InfoRow(label = "ID Pengajuan", value = "#REQ-2023-8821")
-                    InfoRow(label = "Tanggal Pengajuan", value = "24 Oktober 2023")
-                    InfoRow(label = "Tujuan Surat", value = "Permohonan pembuatan Surat Keterangan Mahasiswa Aktif...")
-                }
-            }
-
-            // Dokumen Pendukung
-            Text(text = "Dokumen Pendukung", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-            DocumentItem(fileName = "KTP_Mahasiswa_Scan.pdf", fileSize = "2.4 MB")
-
-            // Surat Diterbitkan
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF66BB6A).copy(alpha = 0.1f))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFDCFCE7)),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Pengajuan Disetujui", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF66BB6A))
-                    Text(text = "Surat Keterangan telah diterbitkan dan siap diunduh.", fontSize = 14.sp, color = Color.Gray)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    InfoRow(label = "Nomor Surat", value = "001/SKM/X/2023")
-                    Divider()
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.PictureAsPdf, contentDescription = "PDF Icon", tint = Color.Red)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(text = "SKM_001_Final.pdf", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                            Text(text = "Signed Digital", fontSize = 10.sp, color = Color.Gray)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.PictureAsPdf, null, tint = Color(0xFFEF4444))
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("SKM_${pengajuan.id}_Digital.pdf", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Sudah ditandatangani secara digital", fontSize = 11.sp, color = Color.Gray)
                         }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Icon(Icons.Default.DownloadDone, contentDescription = "Downloaded", tint = Color(0xFF66BB6A))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { /* Handle Download */ },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(Icons.Default.Download, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Download Surat Sekarang")
                     }
                 }
             }
+        }
+
+        if (isDitolak) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEE2E2)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Warning, null, tint = Color.Red)
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "Pengajuan ditolak. Silakan cek kembali data atau hubungi bagian kemahasiswaan.",
+                        fontSize = 12.sp,
+                        color = Color(0xFF991B1B)
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        TextButton(
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Kembali ke Beranda", color = Color.Gray)
         }
     }
 }
 
 @Composable
 fun InfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(text = label, fontSize = 14.sp, color = Color.Gray)
-        Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-fun DocumentItem(fileName: String, fileSize: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.Attachment, contentDescription = "Attachment Icon")
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = fileName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(text = fileSize, fontSize = 12.sp, color = Color.Gray)
-            }
-            IconButton(onClick = { /*TODO*/ }) {
-                Icon(Icons.Default.Visibility, contentDescription = "View Document")
-            }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun DetailScreenPreview() {
-    UASTheme {
-        DetailScreen(rememberNavController())
+    Column(modifier = Modifier.padding(vertical = 4.dp)) {
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+        Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Spacer(Modifier.height(4.dp))
     }
 }

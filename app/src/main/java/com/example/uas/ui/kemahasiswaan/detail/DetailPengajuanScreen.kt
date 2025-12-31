@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.ArrowBackIosNew
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -35,18 +36,21 @@ fun DetailPengajuanScreen(
 ) {
     val detailState by viewModel.pengajuanDetailState.collectAsState()
     val updateState by viewModel.updateStatusState.collectAsState()
+    val notes by viewModel.notes.collectAsState()
 
     var showApproveDialog by remember { mutableStateOf(false) }
     var showRejectDialog by remember { mutableStateOf(false) }
-    var notes by remember { mutableStateOf("") }
 
+    // Memicu pencarian data di memori lokal (Frontend Lookup)
     LaunchedEffect(pengajuanId) {
         viewModel.getPengajuanById(pengajuanId)
     }
 
+    // Jika update status berhasil, otomatis kembali ke daftar
     LaunchedEffect(updateState) {
         if (updateState is UpdateStatusUiState.Success) {
             navController.popBackStack()
+            viewModel.resetUpdateState() // Reset agar dialog tidak muncul lagi saat kembali
         }
     }
 
@@ -56,7 +60,7 @@ fun DetailPengajuanScreen(
                 title = { Text("Detail Pengajuan", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBackIosNew, contentDescription = "Back")
+                        Icon(Icons.Filled.ArrowBackIosNew, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -65,14 +69,16 @@ fun DetailPengajuanScreen(
     ) { paddingValues ->
         when (val state = detailState) {
             is PengajuanDetailUiState.Loading -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Color(0xFF026AA1))
                 }
             }
             is PengajuanDetailUiState.Success -> {
                 val pengajuan = state.pengajuan
                 Scaffold(
+                    modifier = Modifier.padding(paddingValues),
                     bottomBar = {
+                        // Tombol aksi hanya muncul jika status masih DIAJUKAN
                         if (pengajuan.status.equals("DIAJUKAN", ignoreCase = true)) {
                             ActionFooter(
                                 onApproveClick = { showApproveDialog = true },
@@ -83,50 +89,61 @@ fun DetailPengajuanScreen(
                 ) { innerPadding ->
                     LazyColumn(
                         modifier = Modifier
-                            .padding(innerPadding) // Use innerPadding from the inner Scaffold
+                            .padding(innerPadding)
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background),
+                            .background(Color(0xFFF6F6F8)),
                         contentPadding = PaddingValues(bottom = 16.dp)
                     ) {
                         item { StudentProfileSection(pengajuan) }
                         item { StatusIndicatorSection(pengajuan.status) }
                         item { ApplicationDetailsCard(pengajuan) }
                         item { SupportingFilesSection() }
-                        item { VerificationNotesInput(notes, onValueChange = { notes = it }) }
+
+                        // Input catatan hanya muncul jika status masih DIAJUKAN
+                        if (pengajuan.status.equals("DIAJUKAN", ignoreCase = true)) {
+                            item {
+                                VerificationNotesInput(
+                                    value = notes,
+                                    onValueChange = { viewModel.onNotesChange(it) }
+                                )
+                            }
+                        }
                     }
                 }
             }
             is PengajuanDetailUiState.Error -> {
-                Text(
-                    text = state.message,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(16.dp)
-                )
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(text = state.message, color = MaterialTheme.colorScheme.error)
+                }
             }
             else -> {}
         }
     }
 
+    // Dialog Konfirmasi Setuju
     if (showApproveDialog) {
         ConfirmationDialog(
-            title = "Terima Pengajuan?",
-            message = "Surat akan diproses dan notifikasi akan dikirimkan. Tindakan ini tidak dapat dibatalkan.",
+            title = "Setujui Pengajuan?",
+            message = "Surat akan ditandai SELESAI dan mahasiswa akan menerima notifikasi.",
             onConfirm = {
-                viewModel.updatePengajuanStatus(pengajuanId, "DITERIMA")
+                // Sesuai Enum di Backend: SELESAI
+                viewModel.updatePengajuanStatus(pengajuanId, "SELESAI")
                 showApproveDialog = false
             },
             onDismiss = { showApproveDialog = false },
-            confirmButtonText = "Ya, Terima",
-            icon = Icons.Default.Verified,
+            confirmButtonText = "Ya, Selesaikan",
+            icon = Icons.Default.CheckCircle, // Gunakan icon standard
             iconColor = Color(0xFF16A34A)
         )
     }
 
+    // Dialog Konfirmasi Tolak
     if (showRejectDialog) {
         ConfirmationDialog(
             title = "Tolak Pengajuan?",
-            message = "Pastikan Anda telah memberikan catatan alasan penolakan.",
+            message = "Apakah Anda yakin menolak pengajuan ini?",
             onConfirm = {
+                // Sesuai Enum di Backend: DITOLAK
                 viewModel.updatePengajuanStatus(pengajuanId, "DITOLAK")
                 showRejectDialog = false
             },
@@ -141,100 +158,110 @@ fun DetailPengajuanScreen(
 @Composable
 fun StudentProfileSection(pengajuan: Pengajuan) {
     Row(
-        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(16.dp),
+        modifier = Modifier.fillMaxWidth().background(Color.White).padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(64.dp).clip(CircleShape).background(Color.Gray))
+        Box(
+            modifier = Modifier.size(60.dp).clip(CircleShape).background(Color(0xFFE2E8F0)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Person, null, tint = Color(0xFF94A3B8), modifier = Modifier.size(32.dp))
+        }
         Spacer(Modifier.width(16.dp))
         Column {
-            Text(pengajuan.mahasiswaNama, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Text(pengajuan.mahasiswaNim, color = Color.Gray, fontSize = 14.sp)
+            Text(pengajuan.mahasiswaNama, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF314158))
+            Text("NIM: ${pengajuan.mahasiswaNim}", color = Color.Gray, fontSize = 14.sp)
         }
     }
 }
 
 @Composable
 fun StatusIndicatorSection(status: String) {
-    val (backgroundColor, textColor, text) = when (status) {
-        "SELESAI" -> Triple(Color(0xFFDCFCE7), Color(0xFF16A34A), "Diterima")
+    val (backgroundColor, textColor, label) = when (status.uppercase()) {
+        "SELESAI" -> Triple(Color(0xFFDCFCE7), Color(0xFF16A34A), "Selesai")
         "DITOLAK" -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), "Ditolak")
         else -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "Diajukan")
     }
 
     Row(
-        modifier = Modifier.padding(16.dp).fillMaxWidth().background(backgroundColor, RoundedCornerShape(12.dp)).padding(12.dp),
+        modifier = Modifier.padding(16.dp).fillMaxWidth().background(backgroundColor, RoundedCornerShape(12.dp)).padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.PendingActions, "Status", tint = textColor)
+            Icon(Icons.Default.Info, null, tint = textColor, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Status Saat Ini", fontWeight = FontWeight.SemiBold, color = textColor)
+            Text("Status Verifikasi", fontWeight = FontWeight.SemiBold, color = textColor, fontSize = 14.sp)
         }
-        Text(
-            text, fontWeight = FontWeight.Bold, color = textColor,
-            modifier = Modifier.background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(8.dp)).padding(horizontal = 10.dp, vertical = 4.dp),
-            fontSize = 12.sp
-        )
+        Surface(color = Color.White.copy(alpha = 0.6f), shape = RoundedCornerShape(8.dp)) {
+            Text(label, fontWeight = FontWeight.Bold, color = textColor, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp), fontSize = 12.sp)
+        }
     }
 }
 
 @Composable
 fun ApplicationDetailsCard(pengajuan: Pengajuan) {
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-        Text("INFORMASI SURAT", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text("Rincian Pengajuan", fontWeight = FontWeight.Bold, color = Color(0xFF64748B), fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Tujuan Surat", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                Text(pengajuan.tujuanSurat, style = MaterialTheme.typography.bodyLarge)
-                Divider(modifier = Modifier.padding(vertical = 16.dp))
-                Text("Tanggal Pengajuan", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CalendarToday, "Tanggal", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(pengajuan.tanggalPengajuan, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                }
+                DetailItem(label = "Tujuan Surat", value = pengajuan.tujuanSurat)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = Color(0xFFF1F5F9))
+                DetailItem(label = "Tanggal Masuk", value = pengajuan.tanggalPengajuan, icon = Icons.Default.CalendarToday)
             }
         }
     }
 }
 
-// Other composables (SupportingFilesSection, ActionFooter, etc.) remain largely the same for UI structure
+@Composable
+fun DetailItem(label: String, value: String, icon: ImageVector? = null) {
+    Column {
+        Text(label, fontSize = 12.sp, color = Color.Gray)
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (icon != null) {
+                Icon(icon, null, modifier = Modifier.size(16.dp), tint = Color(0xFF026AA1))
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(value, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color(0xFF314158))
+        }
+    }
+}
+
 @Composable
 fun SupportingFilesSection() {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("FILE PENDUKUNG", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+        Text("Dokumen Pendukung", fontWeight = FontWeight.Bold, color = Color(0xFF64748B), fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
-            FileItem("Scan_KTM_Budi.pdf", "1.2 MB • PDF Document", Icons.Default.PictureAsPdf, Color.Red)
-        }
-    }
-}
-
-@Composable
-fun FileItem(name: String, details: String, icon: ImageVector, iconColor: Color) {
-     Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Icon(icon, name, tint = iconColor, modifier = Modifier.size(32.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(details, fontSize = 12.sp, color = Color.Gray)
+            Row(
+                modifier = Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.PictureAsPdf, null, tint = Color(0xFFEF4444), modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text("KTM_Mahasiswa.pdf", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text("1.2 MB", fontSize = 12.sp, color = Color.Gray)
+                    }
+                }
+                IconButton(onClick = { /* View File */ }) {
+                    Icon(Icons.Default.Visibility, null, tint = Color(0xFF026AA1))
+                }
             }
-        }
-        IconButton(onClick = { /* Handle view file */ }) {
-            Icon(Icons.Default.Visibility, "Lihat Dokumen", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -242,21 +269,29 @@ fun FileItem(name: String, details: String, icon: ImageVector, iconColor: Color)
 @Composable
 fun VerificationNotesInput(value: String, onValueChange: (String) -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Catatan Verifikasi", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        Text("Catatan Tambahan (Opsional)", fontWeight = FontWeight.Bold, color = Color(0xFF314158), fontSize = 14.sp)
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text("Tulis catatan penolakan atau pesan tambahan (Opsional)...") },
+            placeholder = { Text("Tulis alasan penolakan atau instruksi...", fontSize = 14.sp) },
             modifier = Modifier.fillMaxWidth().height(100.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color(0xFF026AA1),
+                unfocusedBorderColor = Color(0xFFE2E8F0)
+            )
         )
     }
 }
 
 @Composable
 fun ActionFooter(onApproveClick: () -> Unit, onRejectClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth(), shadowElevation = 8.dp) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 16.dp,
+        color = Color.White
+    ) {
         Row(
             modifier = Modifier.padding(16.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -265,11 +300,9 @@ fun ActionFooter(onApproveClick: () -> Unit, onRejectClick: () -> Unit) {
                 onClick = onRejectClick,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                border = BorderStroke(2.dp, Color.Red)
+                border = BorderStroke(1.dp, Color(0xFFEF4444)),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
             ) {
-                Icon(Icons.Default.Close, "Tolak")
-                Spacer(Modifier.width(4.dp))
                 Text("Tolak", fontWeight = FontWeight.Bold)
             }
             Button(
@@ -278,9 +311,7 @@ fun ActionFooter(onApproveClick: () -> Unit, onRejectClick: () -> Unit) {
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A))
             ) {
-                Icon(Icons.Default.Check, "Terima")
-                Spacer(Modifier.width(4.dp))
-                Text("Terima Pengajuan", fontWeight = FontWeight.Bold)
+                Text("Setujui Pengajuan", fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -298,24 +329,20 @@ fun ConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-        text = { Text(message, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
-        icon = {
-             Box(modifier = Modifier.size(56.dp).clip(CircleShape).background(iconColor.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(32.dp))
-            }
-        },
+        icon = { Icon(icon, null, tint = iconColor, modifier = Modifier.size(40.dp)) },
+        title = { Text(title, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) },
+        text = { Text(message, textAlign = TextAlign.Center) },
         confirmButton = {
             Button(
                 onClick = onConfirm,
                 modifier = Modifier.fillMaxWidth(),
-                 colors = ButtonDefaults.buttonColors(containerColor = if(iconColor == Color.Red) Color.Red else Color(0xFF16A34A))
+                colors = ButtonDefaults.buttonColors(containerColor = if(iconColor == Color.Red) Color(0xFFEF4444) else Color(0xFF16A34A))
             ) {
                 Text(confirmButtonText)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Batal") }
+            TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Batal", color = Color.Gray) }
         }
     )
 }

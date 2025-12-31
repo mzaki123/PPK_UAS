@@ -6,8 +6,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.uas.data.SessionManager
 import com.example.uas.data.repository.AuthRepository
@@ -19,15 +21,10 @@ fun LoginScreen(
     onLoginSuccess: (String) -> Unit,
     navigateToRegister: () -> Unit
 ) {
-    // Basic ViewModelFactory
     val viewModelFactory = remember {
         object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return LoginViewModel(AuthRepository(RetrofitInstance.api)) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
+                return LoginViewModel(AuthRepository(RetrofitInstance.api)) as T
             }
         }
     }
@@ -42,26 +39,23 @@ fun LoginScreen(
     LaunchedEffect(loginState) {
         when (val state = loginState) {
             is LoginUiState.Success -> {
-                val responseBody = state.data.body()
-                val token = responseBody?.accessToken
-                val role = responseBody?.role
+                val token = state.data.body()?.accessToken
+                // Gunakan role hasil bedahan token di ViewModel tadi lur
+                val role = state.decodedRole
 
-                if (token != null && role != null) {
-                    // SessionManager is already initialized in MyApplication
+                if (token != null) {
+                    // Simpan sesi dengan role hasil bedahan
                     SessionManager.login(token, role)
-
                     onLoginSuccess(role)
                     errorMessage = null
                 } else {
-                    errorMessage = "Login successful, but token or role was null."
+                    errorMessage = "Login sukses, tapi token tidak ditemukan."
                 }
             }
             is LoginUiState.Error -> {
                 errorMessage = state.message
             }
-            else -> {
-                // Idle or Loading, do nothing
-            }
+            else -> {}
         }
     }
 
@@ -69,12 +63,22 @@ fun LoginScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(24.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Login", style = MaterialTheme.typography.headlineMedium)
-            Spacer(modifier = Modifier.height(32.dp))
+            Text(
+                text = "Masuk Ke SIAKTIF",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "Silakan login untuk mengelola pengajuan",
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
 
             OutlinedTextField(
                 value = email,
@@ -83,6 +87,7 @@ fun LoginScreen(
                 modifier = Modifier.fillMaxWidth(),
                 isError = errorMessage != null
             )
+
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
@@ -93,32 +98,34 @@ fun LoginScreen(
                 visualTransformation = PasswordVisualTransformation(),
                 isError = errorMessage != null
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            errorMessage?.let {
+            if (errorMessage != null) {
                 Text(
-                    text = it,
+                    text = errorMessage!!,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 8.dp, start = 4.dp).align(Alignment.Start)
                 )
             }
 
+            Spacer(modifier = Modifier.height(32.dp))
+
             Button(
-                onClick = {
-                    loginViewModel.login(LoginRequest(email, password))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = loginState !is LoginUiState.Loading
+                onClick = { loginViewModel.login(LoginRequest(email, password)) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                enabled = loginState !is LoginUiState.Loading && email.isNotEmpty() && password.isNotEmpty()
             ) {
                 if (loginState is LoginUiState.Loading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
                 } else {
-                    Text("Login")
+                    Text("Login Sekarang", fontWeight = FontWeight.Bold)
                 }
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
             TextButton(onClick = navigateToRegister) {
-                Text("Don't have an account? Register")
+                Text("Belum punya akun? Daftar ")
             }
         }
     }

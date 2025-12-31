@@ -1,58 +1,68 @@
-package com.example.uas.ui.screens
+package com.example.uas.ui.shared.profile
 
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.uas.ui.shared.profile.ChangePasswordUiState
-import com.example.uas.ui.shared.profile.ChangePasswordViewModel
-import com.example.uas.ui.theme.UASTheme
+import com.example.uas.data.repository.ProfileRepository
+import com.example.uas.service.RetrofitInstance
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChangePasswordScreen(
-    navController: NavController,
-    changePasswordViewModel: ChangePasswordViewModel = viewModel() // Inject ViewModel
+    navController: NavController
 ) {
+    // --- FIX 1: Gunakan Factory untuk Inject Repository ke ViewModel ---
+    val viewModel: ChangePasswordViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                return ChangePasswordViewModel(ProfileRepository(RetrofitInstance.api)) as T
+            }
+        }
+    )
+
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    // State Input
     var oldPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var isOldPasswordVisible by remember { mutableStateOf(false) }
-    var isNewPasswordVisible by remember { mutableStateOf(false) }
-    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
 
-    val uiState by changePasswordViewModel.uiState.collectAsState()
-    val context = LocalContext.current
+    // State Visibility
+    var isOldVisible by remember { mutableStateOf(false) }
+    var isNewVisible by remember { mutableStateOf(false) }
+    var isConfirmVisible by remember { mutableStateOf(false) }
 
+    // Listener hasil API
     LaunchedEffect(uiState) {
         when (val state = uiState) {
             is ChangePasswordUiState.Success -> {
-                Toast.makeText(context, "Password berhasil diubah!", Toast.LENGTH_SHORT).show()
-                navController.popBackStack() // Kembali ke layar profil
+                Toast.makeText(context, "Password berhasil diubah lur!", Toast.LENGTH_SHORT).show()
+                navController.popBackStack()
             }
             is ChangePasswordUiState.Error -> {
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
@@ -64,13 +74,12 @@ fun ChangePasswordScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ganti Password", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+                title = { Text("Ganti Password", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
                     }
-                },
-                actions = { Spacer(modifier = Modifier.width(48.dp)) }
+                }
             )
         }
     ) { paddingValues ->
@@ -78,136 +87,106 @@ fun ChangePasswordScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .background(Color(0xFFF8F9FA))
                 .verticalScroll(rememberScrollState())
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                "Silakan masukkan password lama dan password baru Anda untuk mengamankan akun SIAKTIF Anda.",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.padding(bottom = 24.dp)
+                "Gunakan password yang kuat untuk menjaga keamanan akun SIAKTIF kamu lur.",
+                fontSize = 14.sp,
+                color = Color.Gray
             )
 
-            // Old Password
-            OutlinedTextField(
+            // --- Password Lama ---
+            PasswordField(
                 value = oldPassword,
                 onValueChange = { oldPassword = it },
-                label = { Text("Password Lama") },
-                placeholder = { Text("Masukkan password lama") },
-                visualTransformation = if (isOldPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { isOldPasswordVisible = !isOldPasswordVisible }) {
-                        Icon(
-                            imageVector = if (isOldPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = "Toggle password visibility"
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+                label = "Password Lama",
+                isVisible = isOldVisible,
+                onToggleVisibility = { isOldVisible = !isOldVisible }
             )
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // New Password
-            OutlinedTextField(
+            // --- Password Baru ---
+            PasswordField(
                 value = newPassword,
                 onValueChange = { newPassword = it },
-                label = { Text("Password Baru") },
-                placeholder = { Text("Masukkan password baru") },
-                visualTransformation = if (isNewPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { isNewPasswordVisible = !isNewPasswordVisible }) {
-                        Icon(
-                            imageVector = if (isNewPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = "Toggle password visibility"
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth()
+                label = "Password Baru",
+                isVisible = isNewVisible,
+                onToggleVisibility = { isNewVisible = !isNewVisible }
             )
-            // Validation hints
-            Column(modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
-                ValidationRow("Minimal 6 karakter", newPassword.length >= 6)
-                ValidationRow("Berbeda dengan password lama", newPassword.isNotEmpty() && newPassword != oldPassword)
-            }
-            Spacer(modifier = Modifier.height(16.dp))
 
-            // Confirm New Password
-            OutlinedTextField(
+            // --- Validasi Sederhana ---
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ValidationRow("Minimal 6 karakter", newPassword.length >= 6)
+                ValidationRow("Bukan password lama", newPassword.isNotEmpty() && newPassword != oldPassword)
+            }
+
+            // --- Konfirmasi Password Baru ---
+            PasswordField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
-                label = { Text("Konfirmasi Password") },
-                placeholder = { Text("Ulangi password baru") },
-                visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                trailingIcon = {
-                    IconButton(onClick = { isConfirmPasswordVisible = !isConfirmPasswordVisible }) {
-                        Icon(
-                            imageVector = if (isConfirmPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                            contentDescription = "Toggle password visibility"
-                        )
-                    }
-                },
-                isError = confirmPassword.isNotEmpty() && newPassword != confirmPassword,
-                modifier = Modifier.fillMaxWidth()
+                label = "Konfirmasi Password Baru",
+                isVisible = isConfirmVisible,
+                onToggleVisibility = { isConfirmVisible = !isConfirmVisible },
+                isError = confirmPassword.isNotEmpty() && confirmPassword != newPassword
             )
-             if (confirmPassword.isNotEmpty() && newPassword != confirmPassword) {
-                Text(
-                    text = "Password tidak cocok",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 16.dp, top = 4.dp)
-                )
-            }
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
+            // --- Tombol Simpan ---
             Button(
-                onClick = {
-                    changePasswordViewModel.changePassword(oldPassword, newPassword, confirmPassword)
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                enabled = uiState !is ChangePasswordUiState.Loading // Tombol dinonaktifkan saat loading
+                onClick = { viewModel.changePassword(oldPassword, newPassword, confirmPassword) },
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+                shape = RoundedCornerShape(12.dp),
+                enabled = uiState !is ChangePasswordUiState.Loading && newPassword.length >= 6 && newPassword == confirmPassword
             ) {
                 if (uiState is ChangePasswordUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White, strokeWidth = 2.dp)
                 } else {
-                    Text("Simpan Password")
+                    Text("Simpan Perubahan", fontWeight = FontWeight.Bold)
                 }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
-                onClick = { navController.popBackStack() },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Batal")
             }
         }
     }
 }
 
 @Composable
+fun PasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    isVisible: Boolean,
+    onToggleVisibility: () -> Unit,
+    isError: Boolean = false
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        visualTransformation = if (isVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        isError = isError,
+        trailingIcon = {
+            IconButton(onClick = onToggleVisibility) {
+                Icon(if (isVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, null)
+            }
+        }
+    )
+}
+
+@Composable
 fun ValidationRow(text: String, isValid: Boolean) {
-    val validColor = MaterialTheme.colorScheme.primary
-    val invalidColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = if (isValid) Icons.Filled.CheckCircle else Icons.Filled.RadioButtonUnchecked,
             contentDescription = null,
-            tint = if (isValid) validColor else invalidColor,
+            tint = if (isValid) Color(0xFF16A34A) else Color.Gray,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodySmall, color = if (isValid) validColor else invalidColor)
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun ChangePasswordScreenPreview() {
-    UASTheme {
-        ChangePasswordScreen(rememberNavController())
+        Text(text, fontSize = 12.sp, color = if (isValid) Color(0xFF16A34A) else Color.Gray)
     }
 }

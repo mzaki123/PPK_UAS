@@ -7,6 +7,4 @@ data class LoginResponse(
     val email: String,
     @Json(name = "accessToken")
     val accessToken: String,
-    @Json(name = "role")
-    val role: String
 )

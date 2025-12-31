@@ -2,13 +2,14 @@ package com.example.uas.ui.shared.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.uas.data.SessionManager
-import com.example.uas.model.User // <-- Pastikan import ini benar
+import com.example.uas.data.repository.ProfileRepository
+import com.example.uas.model.MahasiswaDto
+import com.example.uas.model.KemahasiswaanDto
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Sealed class untuk UI state management
+// State untuk proses update (Simpan)
 sealed class EditProfileUiState {
     object Idle : EditProfileUiState()
     object Loading : EditProfileUiState()
@@ -16,56 +17,68 @@ sealed class EditProfileUiState {
     data class Error(val message: String) : EditProfileUiState()
 }
 
-class EditProfileViewModel : ViewModel() {
+// State untuk memuat data awal (Fetch)
+sealed class FetchProfileUiState {
+    object Loading : FetchProfileUiState()
+    data class Success(val data: Any) : FetchProfileUiState() // 'Any' agar fleksibel
+    data class Error(val message: String) : FetchProfileUiState()
+}
 
-    private val _userState = MutableStateFlow<User?>(null)
-    val userState: StateFlow<User?> = _userState
+// SATU-SATUNYA ViewModel untuk semua fitur profil
+class EditProfileViewModel(private val repository: ProfileRepository) : ViewModel() {
 
+    // State data user (Bisa MahasiswaDto atau KemahasiswaanDto)
+    private val _userState = MutableStateFlow<FetchProfileUiState>(FetchProfileUiState.Loading)
+    val userState = _userState.asStateFlow()
+
+    // State untuk tombol simpan
     private val _updateState = MutableStateFlow<EditProfileUiState>(EditProfileUiState.Idle)
-    val updateState: StateFlow<EditProfileUiState> = _updateState
+    val updateState = _updateState.asStateFlow()
 
     init {
-        // Panggil fungsi untuk memuat data pengguna saat ViewModel dibuat
-        loadInitialUserData()
+        fetchProfile()
     }
 
-    private fun loadInitialUserData() {
-        // Fungsi ini akan mengambil data user saat ini untuk mengisi form
+    fun fetchProfile() {
+        _userState.value = FetchProfileUiState.Loading
         viewModelScope.launch {
-            // TODO: Nanti, ambil data user yang sedang login dari API.
-            // Untuk sekarang, kita pakai data dummy berdasarkan peran dari SessionManager.
-            val role = SessionManager.getRole()
-            _userState.value = when (role?.uppercase()) {
-                "KEMAHASISWAAN" -> User(
-                    name = "Dr. Budi Raharjo, M.Kom",
-                    email = "budi.raharjo@staff.univ.ac.id",
-                    role = "Kemahasiswaan", // <-- role diisi
-                    nip = "198503152008011001"
-                )
-                "ADMIN" -> User(
-                    name = "Siti Aminah, S.Kom",
-                    email = "admin.siti@univ.ac.id",
-                    role = "Admin" // <-- role diisi
-                )
-                else -> User( // Default ke Mahasiswa
-                    name = "Ahmad Dahlan",
-                    email = "ahmad.d@student.univ.ac.id",
-                    role = "Mahasiswa", // <-- role diisi
-                    nim = "21041001",
-                )
+            try {
+                val data = repository.getProfileByRole()
+                if (data != null) {
+                    _userState.value = FetchProfileUiState.Success(data)
+                } else {
+                    _userState.value = FetchProfileUiState.Error("Data profil tidak ditemukan lur.")
+                }
+            } catch (e: Exception) {
+                _userState.value = FetchProfileUiState.Error(e.message ?: "Gagal memuat profil")
             }
         }
     }
 
-
-    // Function to save changes (will be implemented later)
-    fun saveChanges(updatedUser: User) {
+    fun saveChanges(updatedData: Any) {
         _updateState.value = EditProfileUiState.Loading
-        // Simulate network call
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1500) // Simulasi panggilan API
-            // In a real app, you would call your repository/API here
-            _updateState.value = EditProfileUiState.Success
+            try {
+                val response = repository.updateProfileByRole(updatedData)
+                if (response.isSuccessful) {
+                    _updateState.value = EditProfileUiState.Success
+                    // Refresh data setelah berhasil update
+                    fetchProfile()
+                } else {
+                    val errMsg = when(response.code()) {
+                        400 -> "Data yang kamu masukkan tidak valid lur."
+                        403 -> "Kamu tidak punya akses untuk ubah data ini."
+                        else -> "Gagal menyimpan perubahan."
+                    }
+                    _updateState.value = EditProfileUiState.Error(errMsg)
+                }
+            } catch (e: Exception) {
+                _updateState.value = EditProfileUiState.Error(e.message ?: "Terjadi kesalahan koneksi")
+            }
         }
+    }
+
+    fun resetUpdateState() {
+        _updateState.value = EditProfileUiState.Idle
     }
 }

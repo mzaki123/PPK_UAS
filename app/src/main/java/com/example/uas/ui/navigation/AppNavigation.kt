@@ -21,6 +21,7 @@ object Graph {
 fun AppNavigation() {
     val navController = rememberNavController()
 
+    // Cek status login saat aplikasi dibuka
     val startGraph = if (SessionManager.getToken() != null) {
         when (SessionManager.getRole()?.uppercase()) {
             "MAHASISWA" -> Graph.MAHASISWA
@@ -33,6 +34,8 @@ fun AppNavigation() {
     }
 
     NavHost(navController = navController, startDestination = startGraph) {
+
+        // --- GRAPH AUTH ---
         navigation(startDestination = Routes.LOGIN, route = Graph.AUTHENTICATION) {
             composable(Routes.LOGIN) {
                 LoginScreen(
@@ -58,21 +61,20 @@ fun AppNavigation() {
             }
         }
 
+        // --- GRAPH MAHASISWA ---
         composable(Graph.MAHASISWA) {
             MahasiswaNavigation(onLogout = {
-                SessionManager.logout()
+                SessionManager.logout() // Samakan jadi logout()
                 navController.navigate(Graph.AUTHENTICATION) {
                     popUpTo(Graph.MAHASISWA) { inclusive = true }
                 }
             })
         }
 
+        // --- GRAPH KEMAHASISWAAN ---
         composable(Graph.KEMAHASISWAAN) {
             KemahasiswaanNavigation(
-                // 1. Berikan NavController utama ke parameter 'appNavController'
-                appNavController = navController,
-
-                // 2. Berikan fungsi onLogout ke parameter 'onLogout'
+                appNavController = navController, // Pastikan di file KemahasiswaanNavigation menerima parameter ini
                 onLogout = {
                     SessionManager.logout()
                     navController.navigate(Graph.AUTHENTICATION) {
@@ -82,6 +84,7 @@ fun AppNavigation() {
             )
         }
 
+        // --- GRAPH ADMIN ---
         composable(Graph.ADMIN) {
             AdminNavigation(onLogout = {
                 SessionManager.logout()

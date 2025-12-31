@@ -2,12 +2,12 @@ package com.example.uas.ui.shared.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-// import com.example.uas.data.repository.UserRepository // Nanti akan pakai ini
+import com.example.uas.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// State untuk merepresentasikan hasil dari proses ganti password
+// --- FIX 1: Definisikan State di sini agar bisa dibaca oleh Screen ---
 sealed class ChangePasswordUiState {
     object Idle : ChangePasswordUiState()
     object Loading : ChangePasswordUiState()
@@ -15,34 +15,51 @@ sealed class ChangePasswordUiState {
     data class Error(val message: String) : ChangePasswordUiState()
 }
 
-class ChangePasswordViewModel : ViewModel() {
+class ChangePasswordViewModel(private val repository: ProfileRepository) : ViewModel() {
 
     private val _uiState = MutableStateFlow<ChangePasswordUiState>(ChangePasswordUiState.Idle)
-    val uiState: StateFlow<ChangePasswordUiState> = _uiState
+    val uiState = _uiState.asStateFlow()
 
-    fun changePassword(oldPassword: String, newPassword: String, confirmPassword: String) {
-        // 1. Validasi Frontend
-        if (newPassword.length < 6) {
-            _uiState.value = ChangePasswordUiState.Error("Password baru minimal harus 6 karakter.")
+    fun changePassword(old: String, new: String, confirm: String) {
+        // 1. Validasi Input di Frontend
+        if (new.length < 6) {
+            _uiState.value = ChangePasswordUiState.Error("Password baru minimal harus 6 karakter lur!")
             return
         }
-        if (newPassword != confirmPassword) {
-            _uiState.value = ChangePasswordUiState.Error("Konfirmasi password tidak cocok.")
+        if (new != confirm) {
+            _uiState.value = ChangePasswordUiState.Error("Konfirmasi password tidak cocok!")
             return
         }
-        // ... validasi lain jika perlu
+        if (old == new) {
+            _uiState.value = ChangePasswordUiState.Error("Password baru tidak boleh sama dengan password lama.")
+            return
+        }
 
         _uiState.value = ChangePasswordUiState.Loading
 
         viewModelScope.launch {
-            // TODO: Nanti di sini Anda akan memanggil UserRepository untuk mengirim data ke API backend
-            // val result = userRepository.changePassword(oldPassword, newPassword)
-            // result.onSuccess { ... }
-            // result.onFailure { ... }
+            try {
+                // 2. Memanggil Repository (Pastikan ProfileRepository sudah ada)
+                val response = repository.changePassword(old, new)
 
-            // Untuk sekarang, kita simulasikan proses berhasil setelah 2 detik
-            kotlinx.coroutines.delay(2000)
-            _uiState.value = ChangePasswordUiState.Success
+                if (response.isSuccessful) {
+                    _uiState.value = ChangePasswordUiState.Success
+                } else {
+                    // 3. Menangani error 400 (Password lama salah) atau 500
+                    val errorMsg = when(response.code()) {
+                        400 -> "Password lama yang kamu masukkan salah lur."
+                        500 -> "Password baru tidak boleh sama dengan yang lama."
+                        else -> "Gagal mengubah password. Silakan coba lagi."
+                    }
+                    _uiState.value = ChangePasswordUiState.Error(errorMsg)
+                }
+            } catch (e: Exception) {
+                _uiState.value = ChangePasswordUiState.Error("Terjadi kesalahan koneksi: ${e.message}")
+            }
         }
+    }
+
+    fun resetState() {
+        _uiState.value = ChangePasswordUiState.Idle
     }
 }

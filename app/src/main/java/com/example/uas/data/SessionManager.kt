@@ -3,44 +3,48 @@ package com.example.uas.data
 import android.content.Context
 import android.content.SharedPreferences
 
-object SessionManager {
+class SessionManager private constructor(context: Context) {
+    private val prefs: SharedPreferences = context.getSharedPreferences("user_session", Context.MODE_PRIVATE)
 
-    private const val PREFS_NAME = "app_session_prefs"
-    private const val KEY_TOKEN = "auth_token"
-    private const val KEY_ROLE = "user_role"
+    companion object {
+        @Volatile
+        private var instance: SessionManager? = null
 
-    private var sharedPreferences: SharedPreferences? = null
-
-    // Fungsi ini HARUS dipanggil sekali di awal aplikasi (misalnya di MainActivity)
-    // untuk memberikan "kunci brankas" (Context).
-    fun init(context: Context) {
-        if (sharedPreferences == null) {
-            sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        fun init(context: Context): SessionManager {
+            return instance ?: synchronized(this) {
+                instance ?: SessionManager(context).also { instance = it }
+            }
         }
-    }
 
-    // Fungsi untuk menyimpan data saat login (sekarang disimpan ke file)
-    fun login(token: String, role: String) {
-        val editor = sharedPreferences?.edit()
-        editor?.putString(KEY_TOKEN, "Bearer $token")
-        editor?.putString(KEY_ROLE, role)
-        editor?.apply()
-    }
+        fun getToken(): String? = instance?.prefs?.getString("access_token", null)
+        fun getRole(): String? = instance?.prefs?.getString("user_role", null)
 
-    // Fungsi untuk menghapus data saat logout (menghapus dari file)
-    fun logout() {
-        val editor = sharedPreferences?.edit()
-        editor?.clear()
-        editor?.apply()
-    }
+        /**
+         * FIX: Mengubah parameter 'role' menjadi nullable (String?)
+         * dan memberikan nilai default "MAHASISWA" jika null.
+         */
+        fun login(token: String, role: String? = null) {
+            val finalRole = role ?: "MAHASISWA" // Proteksi jika role dari API null
+            instance?.let {
+                it.prefs.edit()
+                    .putString("access_token", token)
+                    .putString("user_role", finalRole)
+                    .apply()
+            }
+        }
 
-    // Fungsi untuk mendapatkan token dari file penyimpanan
-    fun getToken(): String? {
-        return sharedPreferences?.getString(KEY_TOKEN, null)
-    }
+        // FIX: Kita pakai satu nama saja: logout()
+        fun logout() {
+            instance?.let {
+                it.prefs.edit().clear().apply()
+            }
+        }
 
-    // Fungsi untuk mendapatkan peran (role) dari file penyimpanan
-    fun getRole(): String? {
-        return sharedPreferences?.getString(KEY_ROLE, null)
+        // Alias agar tidak error jika terlanjur panggil clearSession
+        fun clearSession() = logout()
+
+        fun getInstance(): SessionManager {
+            return instance ?: throw IllegalStateException("SessionManager belum di-init lur!")
+        }
     }
 }
