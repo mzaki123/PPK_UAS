@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,18 +22,22 @@ import androidx.navigation.NavController
 import com.example.uas.model.Pengajuan
 import com.example.uas.ui.kemahasiswaan.KemahasiswaanViewModel
 import com.example.uas.ui.kemahasiswaan.PengajuanListUiState
+import com.example.uas.ui.kemahasiswaan.ProfileKemahasiswaanUiState
 import com.example.uas.ui.navigation.Routes
 
 @Composable
 fun DashboardKemahasiswaanScreen(
     navController: NavController,
-    viewModel: KemahasiswaanViewModel // Menggunakan Unified ViewModel lur
+    viewModel: KemahasiswaanViewModel
 ) {
+    // 1. Ambil data dari ViewModel
     val pengajuanState by viewModel.filteredListState.collectAsState()
+    val profileState by viewModel.profileState.collectAsState()
 
-    // Trigger ambil data saat dashboard dibuka
+    // 2. Trigger ambil data saat pertama kali buka layar
     LaunchedEffect(Unit) {
         viewModel.getAllPengajuan()
+        viewModel.getKemahasiswaanProfile() // Pastikan fungsi ini ada di ViewModel kamu lur
     }
 
     LazyColumn(
@@ -42,7 +45,10 @@ fun DashboardKemahasiswaanScreen(
             .fillMaxSize()
             .background(Color(0xFFF6F6F8))
     ) {
-        item { HeaderSection() }
+        // --- FIX 1: Kirim data profileState ke fungsi Header ---
+        item {
+            HeaderSection(profileState = profileState)
+        }
 
         when (val state = pengajuanState) {
             is PengajuanListUiState.Loading -> {
@@ -59,7 +65,7 @@ fun DashboardKemahasiswaanScreen(
                     StatisticsSection(
                         total = list.size,
                         pending = list.count { it.status.equals("DIAJUKAN", ignoreCase = true) },
-                        approved = list.count { it.status.equals("SELESAI", ignoreCase = true) },
+                        approved = list.count { it.status.equals("DITERIMA", ignoreCase = true) || it.status.equals("SELESAI", ignoreCase = true) },
                         rejected = list.count { it.status.equals("DITOLAK", ignoreCase = true) }
                     )
                 }
@@ -67,12 +73,14 @@ fun DashboardKemahasiswaanScreen(
                 item {
                     RecentActivitySection(
                         navController = navController,
-                        recentList = list.take(5) // Ambil 5 pengajuan terbaru
+                        recentList = list.take(5)
                     )
                 }
             }
             is PengajuanListUiState.Error -> {
-                item { Text("Gagal memuat statistik: ${state.message}", color = Color.Red, modifier = Modifier.padding(16.dp)) }
+                item {
+                    Text("Gagal: ${state.message}", color = Color.Red, modifier = Modifier.padding(16.dp))
+                }
             }
             else -> {}
         }
@@ -80,7 +88,7 @@ fun DashboardKemahasiswaanScreen(
 }
 
 @Composable
-fun HeaderSection() {
+fun HeaderSection(profileState: ProfileKemahasiswaanUiState) { // --- FIX 2: Tambahkan parameter di sini ---
     val brandDark = Color(0xFF314158)
     val whiteTransparent = Color.White.copy(alpha = 0.1f)
 
@@ -109,7 +117,6 @@ fun HeaderSection() {
                 }
             }
 
-            // Info Petugas (Bisa ambil dari SessionManager jika perlu)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -120,14 +127,34 @@ fun HeaderSection() {
                 Icon(Icons.Default.AccountCircle, null, tint = Color.White, modifier = Modifier.size(40.dp))
                 Spacer(Modifier.width(12.dp))
                 Column {
-                    Text("Petugas Verifikasi", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    Text("Bagian Pelayanan Mahasiswa", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                    // --- NAMA DINAMIS ---
+                    when (profileState) {
+                        is ProfileKemahasiswaanUiState.Loading -> {
+                            Box(modifier = Modifier.height(20.dp).width(120.dp).background(Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp)))
+                        }
+                        is ProfileKemahasiswaanUiState.Success -> {
+                            val profile = profileState.profile
+                            Text(
+                                text = profile.nama.ifBlank { "KEMAHASISWAAN" },
+                                color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp
+                            )
+                            Text(
+                                text = "NIP. ${profile.nip ?: "-"}",
+                                color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp
+                            )
+                        }
+                        else -> {
+                            Text("KEMAHASISWAAN", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                            Text("Gagal memuat profil", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
+                        }
+                    }
                 }
             }
         }
     }
 }
 
+// Komponen statis di bawah ini tetap sama seperti kode kamu lur...
 @Composable
 fun StatisticsSection(total: Int, pending: Int, approved: Int, rejected: Int) {
     Column(modifier = Modifier.padding(16.dp)) {
@@ -150,19 +177,10 @@ fun StatisticsSection(total: Int, pending: Int, approved: Int, rejected: Int) {
 }
 
 @Composable
-fun StatCard(
-    title: String, value: String, subtitle: String, icon: ImageVector, iconBgColor: Color, iconColor: Color, modifier: Modifier = Modifier, cardBgColor: Color = Color.White
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBgColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
+fun StatCard(title: String, value: String, subtitle: String, icon: ImageVector, iconBgColor: Color, iconColor: Color, modifier: Modifier = Modifier, cardBgColor: Color = Color.White) {
+    Card(modifier = modifier, shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = cardBgColor), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Box(modifier = Modifier.background(iconBgColor, RoundedCornerShape(8.dp)).padding(6.dp)) {
-                Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
-            }
+            Box(modifier = Modifier.background(iconBgColor, RoundedCornerShape(8.dp)).padding(6.dp)) { Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp)) }
             Spacer(Modifier.height(12.dp))
             Text(value, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF314158))
             Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
@@ -174,27 +192,16 @@ fun StatCard(
 @Composable
 fun RecentActivitySection(navController: NavController, recentList: List<Pengajuan>) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("Pengajuan Terbaru", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            TextButton(onClick = { navController.navigate(Routes.KEMAHASISWAAN_DAFTAR_PENGAJUAN) }) {
-                Text("Lihat Semua", color = Color(0xFF135BEC))
-            }
+            TextButton(onClick = { navController.navigate(Routes.KEMAHASISWAAN_DAFTAR_PENGAJUAN) }) { Text("Lihat Semua", color = Color(0xFF135BEC)) }
         }
         Spacer(modifier = Modifier.height(8.dp))
         if (recentList.isEmpty()) {
             Text("Belum ada pengajuan masuk.", modifier = Modifier.padding(vertical = 20.dp), color = Color.Gray)
         } else {
             recentList.forEach { pengajuan ->
-                ActivityItem(
-                    name = pengajuan.mahasiswaNama,
-                    details = "${pengajuan.tujuanSurat} • ${pengajuan.tanggalPengajuan}",
-                    status = pengajuan.status,
-                    onClick = { navController.navigate("${Routes.KEMAHASISWAAN_DETAIL_PENGAJUAN}/${pengajuan.id}") }
-                )
+                ActivityItem(name = pengajuan.mahasiswaNama, details = "${pengajuan.tujuanSurat} • ${pengajuan.tanggalPengajuan}", status = pengajuan.status, onClick = { navController.navigate("${Routes.KEMAHASISWAAN_DETAIL_PENGAJUAN}/${pengajuan.id}") })
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -203,24 +210,14 @@ fun RecentActivitySection(navController: NavController, recentList: List<Pengaju
 
 @Composable
 fun ActivityItem(name: String, details: String, status: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(1.dp)) {
+        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Text(details, fontSize = 12.sp, color = Color.Gray)
             }
-            // Badge Status Sederhana
             val badgeColor = when(status.uppercase()) {
-                "SELESAI" -> Color(0xFF059669)
+                "DITERIMA"-> Color(0xFF059669)
                 "DITOLAK" -> Color(0xFFDC2626)
                 else -> Color(0xFFC2410C)
             }

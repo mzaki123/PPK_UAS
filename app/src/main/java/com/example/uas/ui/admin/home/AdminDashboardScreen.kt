@@ -102,8 +102,8 @@ fun DashboardHeader(stats: LocalDashboardStats) {
             .padding(16.dp)
     ) {
         Spacer(modifier = Modifier.height(24.dp))
-        Text("Admin Dashboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text("Data dihitung otomatis dari sistem", color = Color.White.copy(0.7f), fontSize = 12.sp)
+        Text("Selamat Datang Admin Dashboard", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text("SIAKTIF Control Panel", color = Color.White.copy(0.7f), fontSize = 12.sp)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -137,6 +137,11 @@ fun StatCard(title: String, value: String, icon: androidx.compose.ui.graphics.ve
 
 @Composable
 fun UserActivityItem(user: User, modifier: Modifier = Modifier) {
+    val displayName = if (user.role.uppercase() == "ADMIN") {
+        "Administrator Utama" // Nama untuk admin
+    } else {
+        user.name ?: "User Baru"
+    }
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -149,7 +154,7 @@ fun UserActivityItem(user: User, modifier: Modifier = Modifier) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(user.name ?: "User Baru", color = Color(0xFF314158), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(displayName, color = Color(0xFF314158), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Text("${user.email} - ${user.role}", color = Color(0xFF64748B), fontSize = 12.sp)
             }
             Text("Baru", color = Color(0xFF94A3B8), fontSize = 12.sp)

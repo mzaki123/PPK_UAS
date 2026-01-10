@@ -6,6 +6,7 @@ import com.example.uas.data.repository.UserRepository
 import com.example.uas.model.User
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.squareup.moshi.JsonDataException
 
 sealed class UserUiState {
     object Idle : UserUiState()
@@ -39,13 +40,9 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
     private val _deleteUserState = MutableStateFlow<DeleteUserUiState>(DeleteUserUiState.Idle)
     val deleteUserState: StateFlow<DeleteUserUiState> = _deleteUserState
 
-    // Original list of users from the API
     private var _originalUsers = listOf<User>()
-
-    // StateFlows for search and filter
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow("Semua")
-
     private val _filteredUsers = MutableStateFlow<UserUiState>(UserUiState.Idle)
 
     init {
@@ -64,9 +61,18 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
 
     private fun filterUsers(query: String, filter: String) {
         val filtered = _originalUsers.filter { user ->
-            val matchesQuery = user.name.contains(query, ignoreCase = true) ||
-                               user.email.contains(query, ignoreCase = true)
-            val matchesFilter = if (filter == "Semua") true else user.role.equals(filter, ignoreCase = true)
+            // Sekarang aman karena user.name sudah Nullable (String?)
+            val nameToSearch = when {
+                user.role.equals("ADMIN", ignoreCase = true) -> "Sistem Administrator"
+                else -> user.name ?: ""
+            }
+
+            val matchesQuery = nameToSearch.contains(query, ignoreCase = true) ||
+                    user.email.contains(query, ignoreCase = true)
+
+            val matchesFilter = if (filter == "Semua") true
+            else user.role.equals(filter, ignoreCase = true)
+
             matchesQuery && matchesFilter
         }
         _filteredUsers.value = UserUiState.Success(filtered)
@@ -79,38 +85,30 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
                 val response = userRepository.getAllUsers()
                 if (response.isSuccessful) {
                     _originalUsers = response.body() ?: emptyList()
-                    filterUsers(_searchQuery.value, _selectedFilter.value) // Apply initial filter
+                    filterUsers(_searchQuery.value, _selectedFilter.value)
                 } else {
-                    val error = "Failed to fetch users: ${response.message()}"
-                    _userState.value = UserUiState.Error(error)
-                    _filteredUsers.value = UserUiState.Error(error)
+                    _userState.value = UserUiState.Error("Gagal memuat data (Status: ${response.code()})")
                 }
+            } catch (e: JsonDataException) {
+                // Pesan error khusus jika parsing JSON gagal
+                val errorMsg = "Gagal Parsing: Field 'nama' di JSON server tidak cocok dengan 'name' di Android, atau ada nilai null yang dipaksa masuk."
+                _userState.value = UserUiState.Error(errorMsg)
             } catch (e: Exception) {
-                val error = "An error occurred: ${e.message}"
-                _userState.value = UserUiState.Error(error)
-                _filteredUsers.value = UserUiState.Error(error)
+                _userState.value = UserUiState.Error("Masalah Jaringan: ${e.message}")
             }
         }
     }
 
     fun getUserById(userId: Long) {
         _userDetailState.value = UserDetailUiState.Loading
-
-        // Kita cari manual di list yang sudah ditarik tadi lur
         val user = _originalUsers.find { it.id == userId }
-
         if (user != null) {
-            // Jika ketemu, langsung set sukses
             _userDetailState.value = UserDetailUiState.Success(user)
         } else {
-            // Jika tidak ketemu (misal list kosong), kasih pesan error
-            _userDetailState.value = UserDetailUiState.Error("Data user tidak ditemukan di memori lokal lur!")
+            _userDetailState.value = UserDetailUiState.Error("User tidak ditemukan di cache!")
         }
     }
 
-    /**
-     * Fungsi hapus tetap aman karena backend punya @DeleteMapping("/users/{id}")
-     */
     fun deleteUser(userId: Long) {
         viewModelScope.launch {
             _deleteUserState.value = DeleteUserUiState.Loading
@@ -118,10 +116,9 @@ class UserViewModel(private val userRepository: UserRepository) : ViewModel() {
                 val response = userRepository.deleteUser(userId)
                 if (response.isSuccessful) {
                     _deleteUserState.value = DeleteUserUiState.Success
-                    // Setelah hapus di server, kita tarik ulang list-nya agar sinkron
                     getAllUsers()
                 } else {
-                    _deleteUserState.value = DeleteUserUiState.Error("Gagal hapus user lur")
+                    _deleteUserState.value = DeleteUserUiState.Error("Gagal hapus. Periksa izin akses Admin.")
                 }
             } catch (e: Exception) {
                 _deleteUserState.value = DeleteUserUiState.Error(e.message ?: "Error")

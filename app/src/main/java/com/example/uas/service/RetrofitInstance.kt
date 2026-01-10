@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit
 object RetrofitInstance {
 
     // Sesuaikan IP ini dengan IP Hotspot/Wifi laptopmu lur
-    private const val BASE_URL = "http://10.252.29.39:8080/"
+    private const val BASE_URL = "http://192.168.18.15:8080/"
 
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())

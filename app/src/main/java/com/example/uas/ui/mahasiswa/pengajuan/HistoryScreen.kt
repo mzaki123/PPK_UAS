@@ -112,7 +112,9 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
             Text(text = pengajuan.tujuanSurat, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Spacer(modifier = Modifier.height(16.dp))
             OutlinedButton(
-                onClick = { /* TODO: Navigate to a real detail screen if available */ },
+                onClick = {
+                    navController.navigate("${Routes.DETAIL}/${pengajuan.id}")
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(text = "Lihat Detail")

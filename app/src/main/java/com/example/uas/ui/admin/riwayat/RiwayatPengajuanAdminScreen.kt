@@ -26,7 +26,7 @@ import com.example.uas.model.Pengajuan
 import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.theme.UASTheme
 
-val filters = listOf("Semua", "Diajukan", "Selesai", "Ditolak")
+val filters = listOf("Semua", "Diajukan", "Diterima", "Ditolak")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,7 +190,7 @@ fun PengajuanItem(pengajuan: Pengajuan, modifier: Modifier = Modifier) {
 @Composable
 fun StatusBadge(status: String) {
     val (bgColor, txtColor) = when (status.uppercase()) {
-        "SELESAI" -> Color(0xFFD1FAE5) to Color(0xFF065F46)
+        "DITERIMA" -> Color(0xFFD1FAE5) to Color(0xFF065F46)
         "DITOLAK" -> Color(0xFFFEE2E2) to Color(0xFF991B1B)
         else -> Color(0xFFFEF3C7) to Color(0xFF92400E)
     }

@@ -6,21 +6,19 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.SupervisedUserCircle
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -35,13 +33,14 @@ import com.example.uas.ui.admin.settings.AdminProfileScreen
 import com.example.uas.ui.admin.user.DetailUserScreen
 import com.example.uas.ui.admin.user.ManajemenUserScreen
 import com.example.uas.ui.admin.user.UserViewModel
+import com.example.uas.ui.shared.profile.ChangePasswordScreen
 
+// --- FIX 1: Samakan rute Profile dengan Routes.kt ---
 sealed class AdminScreen(val route: String, val title: String, val icon: ImageVector) {
-    object Home : AdminScreen("admin_home", "Home", Icons.Default.Home)
-    object Users : AdminScreen("admin_users", "Users", Icons.Default.SupervisedUserCircle)
-    object UserDetail : AdminScreen("admin_user_detail/{userId}", "Detail User", Icons.Default.Person)
-    object History : AdminScreen("admin_history", "Riwayat", Icons.Default.History)
-    object Profile : AdminScreen("admin_profile", "Profil", Icons.Default.Person)
+    object Home : AdminScreen(Routes.ADMIN_DASHBOARD, "Home", Icons.Default.Home)
+    object Users : AdminScreen(Routes.ADMIN_MANAJEMEN_USER, "Users", Icons.Default.SupervisedUserCircle)
+    object History : AdminScreen(Routes.ADMIN_RIWAYAT, "Riwayat", Icons.Default.History)
+    object Profile : AdminScreen(Routes.ADMIN_SETTINGS, "Profil", Icons.Default.Person)
 }
 
 val adminItems = listOf(
@@ -55,7 +54,6 @@ val adminItems = listOf(
 fun AdminNavigation(onLogout: () -> Unit) {
     val navController = rememberNavController()
 
-    // ViewModelFactory for UserViewModel
     val userViewModelFactory = remember {
         object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -67,7 +65,6 @@ fun AdminNavigation(onLogout: () -> Unit) {
             }
         }
     }
-    // Shared UserViewModel instance
     val userViewModel: UserViewModel = viewModel(factory = userViewModelFactory)
 
     Scaffold(
@@ -79,6 +76,7 @@ fun AdminNavigation(onLogout: () -> Unit) {
                     NavigationBarItem(
                         icon = { Icon(screen.icon, contentDescription = null) },
                         label = { Text(screen.title) },
+                        // FIX 2: Supaya tab tetep nyala walau lagi di sub-halaman
                         selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
                         onClick = {
                             navController.navigate(screen.route) {
@@ -95,11 +93,12 @@ fun AdminNavigation(onLogout: () -> Unit) {
         }
     ) { innerPadding ->
         NavHost(
-            navController,
+            navController = navController,
             startDestination = AdminScreen.Home.route,
             Modifier.padding(innerPadding)
         ) {
             composable(AdminScreen.Home.route) { AdminDashboardScreen() }
+
             composable(AdminScreen.Users.route) {
                 ManajemenUserScreen(
                     userViewModel = userViewModel,
@@ -108,10 +107,23 @@ fun AdminNavigation(onLogout: () -> Unit) {
                     }
                 )
             }
+
             composable(AdminScreen.History.route) { RiwayatPengajuanAdminScreen() }
-            composable(AdminScreen.Profile.route) { AdminProfileScreen(onLogout = onLogout) }
+
+            composable(AdminScreen.Profile.route) {
+                AdminProfileScreen(
+                    navController = navController,
+                    onLogout = onLogout
+                )
+            }
+
+            // FIX 3: Pastikan rute pendukung terdaftar agar tidak crash
+            composable(Routes.CHANGE_PASSWORD) {
+                ChangePasswordScreen(navController = navController)
+            }
+
             composable(
-                route = AdminScreen.UserDetail.route,
+                route = "admin_user_detail/{userId}",
                 arguments = listOf(navArgument("userId") { type = NavType.LongType })
             ) { backStackEntry ->
                 val userId = backStackEntry.arguments?.getLong("userId") ?: 0L

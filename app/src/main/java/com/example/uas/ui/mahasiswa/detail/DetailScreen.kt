@@ -76,7 +76,7 @@ fun DetailContent(
     modifier: Modifier = Modifier,
     onBack: () -> Unit
 ) {
-    val isSelesai = pengajuan.status.equals("SELESAI", ignoreCase = true)
+    val isSelesai = pengajuan.status.equals("DITERIMA", ignoreCase = true)
     val isDitolak = pengajuan.status.equals("DITOLAK", ignoreCase = true)
 
     Column(

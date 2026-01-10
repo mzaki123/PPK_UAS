@@ -26,7 +26,6 @@ import androidx.compose.ui.window.Dialog
 import com.example.uas.model.User
 import com.example.uas.ui.theme.UASTheme
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailUserScreen(
@@ -53,7 +52,14 @@ fun DetailUserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detail Pengguna", fontWeight = FontWeight.Bold, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                title = {
+                    Text(
+                        text = "Detail Pengguna",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -73,12 +79,21 @@ fun DetailUserScreen(
                 }
                 is UserDetailUiState.Success -> {
                     val user = state.user
+
+                    // Logic for display name in dialog and header
+                    val safeName = when {
+                        user.role.equals("ADMIN", ignoreCase = true) -> "Sistem Administrator"
+                        user.name.isNullOrBlank() -> "User Belum Mengisi Profil"
+                        else -> user.name
+                    }
+
                     LazyColumn(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         item {
                             UserProfileHeader(
-                                name = user.name,
+                                name = safeName,
                                 role = user.role,
                                 isActive = true // Placeholder
                             )
@@ -87,7 +102,7 @@ fun DetailUserScreen(
                             UserInfoSection(
                                 nim = user.id.toString(),
                                 email = user.email,
-                                kelas = "TI-3A" // Placeholder
+                                role = user.role
                             )
                         }
                         item {
@@ -97,7 +112,7 @@ fun DetailUserScreen(
 
                     if (showDeleteDialog) {
                         DeleteUserDialog(
-                            userName = user.name,
+                            userName = safeName,
                             onConfirm = {
                                 userViewModel.deleteUser(user.id)
                                 showDeleteDialog = false
@@ -117,7 +132,6 @@ fun DetailUserScreen(
     }
 }
 
-// Composables (UserProfileHeader, UserInfoSection, etc.) remain unchanged
 @Composable
 fun UserProfileHeader(name: String, role: String, isActive: Boolean) {
     Column(
@@ -155,14 +169,25 @@ fun UserProfileHeader(name: String, role: String, isActive: Boolean) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        Text(name, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0D121B))
+        Text(
+            text = name,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF0D121B),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
         Spacer(modifier = Modifier.height(8.dp))
         RoleBadge(role = role)
     }
 }
 
 @Composable
-fun UserInfoSection(nim: String, email: String, kelas: String) {
+fun UserInfoSection(nim: String, email: String, role: String) {
+    // Dynamic Label based on role
+    val idLabel = if (role.equals("MAHASISWA", true)) "NIM" else "ID User"
+    val kelasPlaceholder = if (role.equals("MAHASISWA", true)) "TI-3A" else "-"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -180,11 +205,14 @@ fun UserInfoSection(nim: String, email: String, kelas: String) {
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                InfoRow(icon = Icons.Default.Badge, label = "NIM", value = nim)
-                Divider(Modifier.padding(horizontal = 16.dp))
+                InfoRow(icon = Icons.Default.Badge, label = idLabel, value = nim)
+                HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 1.dp, color = Color(0xFFE2E8F0))
                 InfoRow(icon = Icons.Default.Email, label = "Email", value = email)
-                Divider(Modifier.padding(horizontal = 16.dp))
-                InfoRow(icon = Icons.Default.School, label = "Kelas", value = kelas)
+
+                if (role.equals("MAHASISWA", true)) {
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 1.dp, color = Color(0xFFE2E8F0))
+                    InfoRow(icon = Icons.Default.School, label = "Kelas", value = kelasPlaceholder)
+                }
             }
         }
     }
@@ -200,14 +228,13 @@ fun InfoRow(icon: ImageVector, label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = label, tint = Color.Gray)
+            Icon(icon, contentDescription = label, tint = Color.Gray, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(16.dp))
             Text(label, color = Color.Gray, fontSize = 14.sp)
         }
-        Text(value, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+        Text(value, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color(0xFF0D121B))
     }
 }
-
 
 @Composable
 fun UserActionButtons(onDeleteClick: () -> Unit) {

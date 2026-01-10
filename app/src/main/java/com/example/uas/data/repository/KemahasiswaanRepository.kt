@@ -1,5 +1,6 @@
 package com.example.uas.data.repository
 
+import com.example.uas.model.KemahasiswaanDto
 import com.example.uas.model.Pengajuan
 import com.example.uas.model.request.PengajuanUpdateStatusRequest
 import com.example.uas.service.ApiService
@@ -22,4 +23,8 @@ class KemahasiswaanRepository(private val apiService: ApiService) {
         val request = PengajuanUpdateStatusRequest(status = status)
         return apiService.updateStatusPengajuan(id, request)
     }
+
+    suspend fun getKemahasiswaanProfile(): Response<KemahasiswaanDto> {
+        return apiService.getKemahasiswaanProfile()    }
 }
+

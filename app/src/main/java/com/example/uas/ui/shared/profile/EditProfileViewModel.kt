@@ -39,6 +39,15 @@ class EditProfileViewModel(private val repository: ProfileRepository) : ViewMode
         fetchProfile()
     }
 
+    fun isIdentifierEditable(data: Any?): Boolean {
+        return when (data) {
+            is MahasiswaDto -> data.nim.isNullOrBlank() // Bisa diedit jika NIM null atau kosong
+            is KemahasiswaanDto -> data.nip.isNullOrBlank() // Bisa diedit jika NIP null atau kosong
+            else -> false // Jika data user tidak ada, tidak bisa diedit
+        }
+    }
+
+
     fun fetchProfile() {
         _userState.value = FetchProfileUiState.Loading
         viewModelScope.launch {
@@ -66,7 +75,7 @@ class EditProfileViewModel(private val repository: ProfileRepository) : ViewMode
                     fetchProfile()
                 } else {
                     val errMsg = when(response.code()) {
-                        400 -> "Data yang kamu masukkan tidak valid lur."
+                        400 -> "Data yang kamu masukkan tidak valid ."
                         403 -> "Kamu tidak punya akses untuk ubah data ini."
                         else -> "Gagal menyimpan perubahan."
                     }

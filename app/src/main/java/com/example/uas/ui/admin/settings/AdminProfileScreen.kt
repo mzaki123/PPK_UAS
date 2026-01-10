@@ -6,13 +6,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,12 +26,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
+import com.example.uas.ui.navigation.Routes
 import com.example.uas.ui.theme.UASTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminProfileScreen(onLogout: () -> Unit) {
+fun AdminProfileScreen(
+    navController: NavController,
+    onLogout: () -> Unit
+){
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -51,12 +60,41 @@ fun AdminProfileScreen(onLogout: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             ProfileHeader()
             Spacer(modifier = Modifier.height(24.dp))
-            SettingsMenu(onAboutClick = { showAboutDialog = true }, onLogoutClick = onLogout)
+            SettingsMenu(
+                navController = navController,
+                onAboutClick = { showAboutDialog = true },
+                onLogoutTrigger = { showLogoutDialog = true }
+            )
         }
     }
 
     if (showAboutDialog) {
         AboutAppDialog(onDismiss = { showAboutDialog = false })
+    }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, null, tint = Color.Red) },
+            title = { Text("Konfirmasi Keluar", fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin keluar? Anda harus login kembali untuk mengakses data.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        onLogout()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                ) {
+                    Text("Ya, Keluar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal", color = Color.Gray)
+                }
+            }
+        )
     }
 }
 
@@ -91,7 +129,11 @@ fun ProfileHeader() {
 }
 
 @Composable
-fun SettingsMenu(onAboutClick: () -> Unit, onLogoutClick: () -> Unit) {
+fun SettingsMenu(
+    navController: NavController,
+    onAboutClick: () -> Unit,
+    onLogoutTrigger: () -> Unit
+){
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         // Account Security
         SettingsGroup(
@@ -101,7 +143,7 @@ fun SettingsMenu(onAboutClick: () -> Unit, onLogoutClick: () -> Unit) {
                     icon = Icons.Default.Lock,
                     title = "Ganti Password",
                     subtitle = "Ubah kata sandi akun anda",
-                    onClick = { /*TODO*/ }
+                    onClick = { navController.navigate(Routes.CHANGE_PASSWORD) }
                 )
             )
         )
@@ -123,7 +165,7 @@ fun SettingsMenu(onAboutClick: () -> Unit, onLogoutClick: () -> Unit) {
 
         // Logout Button
         Button(
-            onClick = onLogoutClick,
+            onClick = onLogoutTrigger, // Pemicu Dialog
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
@@ -136,7 +178,7 @@ fun SettingsMenu(onAboutClick: () -> Unit, onLogoutClick: () -> Unit) {
                 modifier = Modifier.padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.Logout, contentDescription = "Logout")
+                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = "Logout")
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Keluar Aplikasi", fontWeight = FontWeight.SemiBold)
             }
@@ -256,6 +298,9 @@ fun AboutAppDialog(onDismiss: () -> Unit) {
 @Composable
 fun AdminProfileScreenPreview() {
     UASTheme {
-        AdminProfileScreen(onLogout = {})
+        AdminProfileScreen(
+            navController = rememberNavController(),
+            onLogout = {}
+        )
     }
 }

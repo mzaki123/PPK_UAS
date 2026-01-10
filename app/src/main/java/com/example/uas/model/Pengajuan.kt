@@ -14,5 +14,7 @@ data class Pengajuan(
     @Json(name = "mahasiswaNama")
     val mahasiswaNama: String,
     @Json(name = "mahasiswaNim")
-    val mahasiswaNim: String
+    val mahasiswaNim: String,
+    @Json(name = "filePendukung")
+    val filePendukung: String?
 )

@@ -129,7 +129,7 @@ fun SearchBarSection(query: String, onQueryChange: (String) -> Unit) {
 
 @Composable
 fun FilterSection(selectedFilter: String, onFilterChange: (String) -> Unit) {
-    val filters = listOf("Semua", "Diajukan", "Selesai", "Ditolak")
+    val filters = listOf("Semua", "Diajukan", "Diterima", "Ditolak")
     LazyRow(
         modifier = Modifier
             .fillMaxWidth()
@@ -195,7 +195,7 @@ fun PengajuanCard(pengajuan: Pengajuan, navController: NavController) {
 @Composable
 fun StatusBadgeSmall(status: String) {
     val (bgColor, txtColor) = when (status.uppercase()) {
-        "SELESAI" -> Color(0xFFDCFCE7) to Color(0xFF16A34A)
+        "DITERIMA" -> Color(0xFFDCFCE7) to Color(0xFF16A34A)
         "DITOLAK" -> Color(0xFFFEE2E2) to Color(0xFFDC2626)
         else -> Color(0xFFFFFBEB) to Color(0xFFB45309)
     }

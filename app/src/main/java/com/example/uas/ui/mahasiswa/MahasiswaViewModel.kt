@@ -1,13 +1,20 @@
 package com.example.uas.ui.mahasiswa
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.uas.data.repository.MahasiswaRepository
+import com.example.uas.model.MahasiswaDto
 import com.example.uas.model.Pengajuan
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
 sealed class HistoryUiState {
     object Idle : HistoryUiState()
@@ -15,7 +22,17 @@ sealed class HistoryUiState {
     data class Success(val pengajuan: List<Pengajuan>) : HistoryUiState()
     data class Error(val message: String) : HistoryUiState()
 }
-
+sealed class ProfileUiState {
+    object Loading : ProfileUiState()
+    data class Success(val profile: MahasiswaDto) : ProfileUiState()
+    data class Error(val message: String) : ProfileUiState()
+}
+sealed class CreatePengajuanUiState {
+    object Idle : CreatePengajuanUiState()
+    object Loading : CreatePengajuanUiState()
+    object Success : CreatePengajuanUiState()
+    data class Error(val message: String) : CreatePengajuanUiState()
+}
 sealed class PengajuanDetailUiState {
     object Idle : PengajuanDetailUiState()
     object Loading : PengajuanDetailUiState()
@@ -23,25 +40,32 @@ sealed class PengajuanDetailUiState {
     data class Error(val message: String) : PengajuanDetailUiState()
 }
 
-sealed class CreatePengajuanUiState {
-    object Idle : CreatePengajuanUiState()
-    object Loading : CreatePengajuanUiState()
-    object Success : CreatePengajuanUiState()
-    data class Error(val message: String) : CreatePengajuanUiState()
-}
-
 class MahasiswaViewModel(private val repository: MahasiswaRepository) : ViewModel() {
 
     private var _originalHistory = listOf<Pengajuan>()
-
     private val _historyState = MutableStateFlow<HistoryUiState>(HistoryUiState.Idle)
-    val historyState: StateFlow<HistoryUiState> = _historyState
+    val historyState = _historyState.asStateFlow()
+
+    private val _profileState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
+    val profileState = _profileState.asStateFlow()
+
+    private val _createState = MutableStateFlow<CreatePengajuanUiState>(CreatePengajuanUiState.Idle)
+    val createState = _createState.asStateFlow()
+
+    private val _selectedFileUri = MutableStateFlow<Uri?>(null)
+    val selectedFileUri = _selectedFileUri.asStateFlow()
 
     private val _detailState = MutableStateFlow<PengajuanDetailUiState>(PengajuanDetailUiState.Idle)
     val detailState = _detailState.asStateFlow()
 
-    private val _createState = MutableStateFlow<CreatePengajuanUiState>(CreatePengajuanUiState.Idle)
-    val createState: StateFlow<CreatePengajuanUiState> = _createState
+    init { fetchData() }
+
+    fun fetchData() {
+        getMyPengajuan()
+        getMyProfile()
+    }
+
+    fun onFileSelected(uri: Uri?) { _selectedFileUri.value = uri }
 
     fun getMyPengajuan() {
         viewModelScope.launch {
@@ -55,42 +79,87 @@ class MahasiswaViewModel(private val repository: MahasiswaRepository) : ViewMode
                     _historyState.value = HistoryUiState.Error("Gagal memuat riwayat.")
                 }
             } catch (e: Exception) {
-                _historyState.value = HistoryUiState.Error(e.message ?: "Error")
+                _historyState.value = HistoryUiState.Error(e.message ?: "Error Jaringan")
             }
         }
     }
 
     /**
-     * MENCARI DETAIL DI MEMORI (Frontend Lookup)
+     * Validasi: Cek apakah Nama dan Kelas sudah terisi di profil.
      */
-    fun getPengajuanById(id: Long) {
-        _detailState.value = PengajuanDetailUiState.Loading
-        val item = _originalHistory.find { it.id == id }
-        if (item != null) {
-            _detailState.value = PengajuanDetailUiState.Success(item)
+    fun isProfileReady(): Boolean {
+        val state = _profileState.value
+        return if (state is ProfileUiState.Success) {
+            // Pastikan nama dan kelas tidak null dan tidak kosong
+            !state.profile.nama.isNullOrBlank() && !state.profile.kelas.isNullOrBlank()
         } else {
-            _detailState.value = PengajuanDetailUiState.Error("Data pengajuan tidak ditemukan di lokal.")
+            false
         }
     }
 
-    fun createPengajuan(tujuan: String) {
+    fun createPengajuan(context: Context, tujuan: String) {
+        // Validasi profil sebelum proses upload lur
+        if (!isProfileReady()) {
+            _createState.value = CreatePengajuanUiState.Error("Lengkapi profil (Nama & Kelas) dulu lur!")
+            return
+        }
+
+        val uri = _selectedFileUri.value
+        if (uri == null) {
+            _createState.value = CreatePengajuanUiState.Error("Pilih file PDF lampiran dulu lur!")
+            return
+        }
+
         viewModelScope.launch {
             _createState.value = CreatePengajuanUiState.Loading
             try {
-                val response = repository.createPengajuan(tujuan)
+                val tujuanBody = tujuan.toRequestBody("text/plain".toMediaTypeOrNull())
+                val file = uriToFile(context, uri)
+                val requestFile = file.asRequestBody("application/pdf".toMediaTypeOrNull())
+                val filePart = MultipartBody.Part.createFormData("file", file.name, requestFile)
+
+                val response = repository.createPengajuanWithFile(tujuanBody, filePart)
+
                 if (response.isSuccessful) {
                     _createState.value = CreatePengajuanUiState.Success
-                    getMyPengajuan() // Refresh history
+                    getMyPengajuan()
                 } else {
-                    _createState.value = CreatePengajuanUiState.Error("Gagal membuat pengajuan.")
+                    _createState.value = CreatePengajuanUiState.Error("Gagal kirim: ${response.message()}")
                 }
             } catch (e: Exception) {
-                _createState.value = CreatePengajuanUiState.Error(e.message ?: "Error")
+                _createState.value = CreatePengajuanUiState.Error(e.message ?: "Terjadi kesalahan")
             }
         }
     }
 
-    fun resetCreateState() {
-        _createState.value = CreatePengajuanUiState.Idle
+    private fun uriToFile(context: Context, uri: Uri): File {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val file = File(context.cacheDir, "temp_upload_${System.currentTimeMillis()}.pdf")
+        val outputStream = FileOutputStream(file)
+        inputStream?.copyTo(outputStream)
+        inputStream?.close()
+        outputStream.close()
+        return file
+    }
+
+    fun getPengajuanById(id: Long) {
+        val item = _originalHistory.find { it.id == id }
+        _detailState.value = if (item != null) PengajuanDetailUiState.Success(item)
+        else PengajuanDetailUiState.Error("Data tidak ditemukan")
+    }
+
+    fun resetCreateState() { _createState.value = CreatePengajuanUiState.Idle }
+
+    private fun getMyProfile() {
+        viewModelScope.launch {
+            try {
+                val response = repository.getMyProfile()
+                if (response.isSuccessful) {
+                    _profileState.value = ProfileUiState.Success(response.body()!!)
+                }
+            } catch (e: Exception) {
+                _profileState.value = ProfileUiState.Error(e.message ?: "Gagal muat profil")
+            }
+        }
     }
 }

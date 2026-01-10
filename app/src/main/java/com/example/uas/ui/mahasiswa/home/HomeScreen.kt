@@ -28,7 +28,13 @@ import com.example.uas.R
 import com.example.uas.data.SessionManager
 import com.example.uas.ui.mahasiswa.HistoryUiState
 import com.example.uas.ui.mahasiswa.MahasiswaViewModel
+import com.example.uas.ui.mahasiswa.ProfileUiState
 import com.example.uas.ui.navigation.Routes
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import kotlin.text.format
+import java.util.Locale
+
 
 @Composable
 fun HomeScreen(
@@ -36,10 +42,7 @@ fun HomeScreen(
     viewModel: MahasiswaViewModel
 ) {
     val historyState by viewModel.historyState.collectAsState()
-
-    LaunchedEffect(Unit) {
-        viewModel.getMyPengajuan()
-    }
+    val profileState by viewModel.profileState.collectAsState()
 
     Column(
         modifier = Modifier
@@ -76,7 +79,10 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    modifier = Modifier.size(60.dp).clip(CircleShape).background(Color(0xFFF1F5F9)),
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF1F5F9)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.Default.Person, null, tint = Color.Gray, modifier = Modifier.size(32.dp))
@@ -84,7 +90,26 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
                     Text("MAHASISWA AKTIF", fontSize = 10.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    Text(SessionManager.getRole() ?: "Mahasiswa", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    when (val state = profileState) {
+                        is ProfileUiState.Loading -> {
+                            // Tampilkan loading kecil saat nama diambil
+                            LinearProgressIndicator(modifier = Modifier
+                                .width(120.dp)
+                                .padding(vertical = 8.dp))
+                        }
+                        is ProfileUiState.Success -> {
+                            // Tampilkan nama dari backend, atau "MAHASISWA" jika kosong
+                            Text(
+                                text = if (state.profile.nama.isNotBlank()) state.profile.nama else "MAHASISWA",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
+                        }
+                        is ProfileUiState.Error -> {
+                            // Jika gagal ambil nama, tampilkan default
+                            Text("MAHASISWA", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        }
+                    }
                     Text("Selamat beraktivitas !", fontSize = 12.sp, color = Color.Gray)
                 }
             }
@@ -99,8 +124,10 @@ fun HomeScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Statistik Pengajuan", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            val currentTime = Calendar.getInstance().time
+            val timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
             Text(
-                "Real-time",
+                text = "Update ${timeFormat.format(currentTime)}", // Format waktu saat ini
                 fontSize = 11.sp,
                 color = Color.DarkGray,
                 modifier = Modifier
@@ -113,7 +140,9 @@ fun HomeScreen(
 
         when (val state = historyState) {
             is HistoryUiState.Loading -> {
-                Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                Box(Modifier
+                    .fillMaxWidth()
+                    .height(150.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(strokeWidth = 2.dp)
                 }
             }
@@ -147,7 +176,9 @@ fun HomeScreen(
         // --- Action Buttons ---
         Button(
             onClick = { navController.navigate(Routes.FORM_PENGAJUAN) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF026AA1))
         ) {
@@ -160,7 +191,9 @@ fun HomeScreen(
 
         OutlinedButton(
             onClick = { navController.navigate(Routes.HISTORY) },
-            modifier = Modifier.fillMaxWidth().height(52.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
             shape = RoundedCornerShape(12.dp),
             border = BorderStroke(1.dp, Color(0xFF026AA1))
         ) {

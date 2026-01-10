@@ -26,6 +26,10 @@ import com.example.uas.model.Pengajuan
 import com.example.uas.ui.kemahasiswaan.KemahasiswaanViewModel
 import com.example.uas.ui.kemahasiswaan.PengajuanDetailUiState
 import com.example.uas.ui.kemahasiswaan.UpdateStatusUiState
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +101,13 @@ fun DetailPengajuanScreen(
                         item { StudentProfileSection(pengajuan) }
                         item { StatusIndicatorSection(pengajuan.status) }
                         item { ApplicationDetailsCard(pengajuan) }
-                        item { SupportingFilesSection() }
+                        // Tampilkan bagian ini HANYA JIKA filePendukung tidak null atau kosong
+                        if (!pengajuan.filePendukung.isNullOrBlank()) {
+                            item {
+                                // Berikan URL file ke SupportingFilesSection
+                                SupportingFilesSection(fileUrl = pengajuan.filePendukung)
+                            }
+                        }
 
                         // Input catatan hanya muncul jika status masih DIAJUKAN
                         if (pengajuan.status.equals("DIAJUKAN", ignoreCase = true)) {
@@ -178,7 +188,7 @@ fun StudentProfileSection(pengajuan: Pengajuan) {
 @Composable
 fun StatusIndicatorSection(status: String) {
     val (backgroundColor, textColor, label) = when (status.uppercase()) {
-        "SELESAI" -> Triple(Color(0xFFDCFCE7), Color(0xFF16A34A), "Selesai")
+        "DITERIMA" -> Triple(Color(0xFFDCFCE7), Color(0xFF16A34A), "Selesai")
         "DITOLAK" -> Triple(Color(0xFFFEE2E2), Color(0xFFDC2626), "Ditolak")
         else -> Triple(Color(0xFFFEF3C7), Color(0xFFD97706), "Diajukan")
     }
@@ -235,7 +245,10 @@ fun DetailItem(label: String, value: String, icon: ImageVector? = null) {
 }
 
 @Composable
-fun SupportingFilesSection() {
+fun SupportingFilesSection(fileUrl: String) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Dokumen Pendukung", fontWeight = FontWeight.Bold, color = Color(0xFF64748B), fontSize = 12.sp)
         Spacer(Modifier.height(8.dp))
@@ -254,12 +267,9 @@ fun SupportingFilesSection() {
                     Icon(Icons.Default.PictureAsPdf, null, tint = Color(0xFFEF4444), modifier = Modifier.size(32.dp))
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("KTM_Mahasiswa.pdf", fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                        Text("1.2 MB", fontSize = 12.sp, color = Color.Gray)
+                        Text("File Tambahan.pdf", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                        Text("berisi bukti tambahan ", fontSize = 12.sp, color = Color.Gray)
                     }
-                }
-                IconButton(onClick = { /* View File */ }) {
-                    Icon(Icons.Default.Visibility, null, tint = Color(0xFF026AA1))
                 }
             }
         }

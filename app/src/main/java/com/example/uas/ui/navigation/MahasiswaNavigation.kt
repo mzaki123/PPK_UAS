@@ -5,17 +5,20 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.uas.data.repository.MahasiswaRepository
 import com.example.uas.data.repository.ProfileRepository
 import com.example.uas.service.RetrofitInstance
 import com.example.uas.ui.components.BottomNavigationBar
 import com.example.uas.ui.mahasiswa.MahasiswaViewModel
+import com.example.uas.ui.mahasiswa.detail.DetailPengajuanMahasiswaScreen
 import com.example.uas.ui.mahasiswa.home.HomeScreen
 import com.example.uas.ui.mahasiswa.form.FormPengajuanScreen
 import com.example.uas.ui.mahasiswa.pengajuan.HistoryScreen
@@ -27,15 +30,24 @@ import com.example.uas.ui.shared.profile.EditProfileViewModel
 @Composable
 fun MahasiswaNavigation(onLogout: () -> Unit) {
     val navController = rememberNavController()
+    // Ambil Application Context agar aman dari memory leak lur
+    val context = LocalContext.current.applicationContext
 
-    // --- SHARED VIEWMODEL MAHASISWA ---
-    val viewModelFactory = remember {
+    // ViewModelFactory untuk MahasiswaViewModel
+    val viewModelFactory = remember(context) {
         object : androidx.lifecycle.ViewModelProvider.Factory {
             override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                return MahasiswaViewModel(MahasiswaRepository(RetrofitInstance.api)) as T
+                if (modelClass.isAssignableFrom(MahasiswaViewModel::class.java)) {
+                    @Suppress("UNCHECKED_CAST")
+                    // Kirim context ke Repository jika memang dibutuhkan di sana
+                    return MahasiswaViewModel(MahasiswaRepository(RetrofitInstance.api)) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
             }
         }
     }
+
+    // ViewModel ini bersifat Shared (dipakai semua screen di bawah)
     val mahasiswaViewModel: MahasiswaViewModel = viewModel(factory = viewModelFactory)
 
     Scaffold(
@@ -46,12 +58,10 @@ fun MahasiswaNavigation(onLogout: () -> Unit) {
             startDestination = Routes.HOME,
             modifier = Modifier.padding(innerPadding)
         ) {
-            // 1. Dashboard Mahasiswa
             composable(Routes.HOME) {
                 HomeScreen(navController, viewModel = mahasiswaViewModel)
             }
 
-            // 2. Form Pengajuan Baru
             composable(Routes.FORM_PENGAJUAN) {
                 FormPengajuanScreen(
                     navController = navController,
@@ -59,12 +69,10 @@ fun MahasiswaNavigation(onLogout: () -> Unit) {
                 )
             }
 
-            // 3. Riwayat Pengajuan Saya
             composable(Routes.HISTORY) {
                 HistoryScreen(navController, viewModel = mahasiswaViewModel)
             }
 
-            // 4. Profil
             composable(Routes.PROFILE) {
                 ProfileScreen(navController, onLogout = onLogout)
             }
@@ -74,6 +82,7 @@ fun MahasiswaNavigation(onLogout: () -> Unit) {
             }
 
             composable(Routes.EDIT_PROFILE) {
+                // Factory lokal untuk EditProfile
                 val editViewModel: EditProfileViewModel = viewModel(
                     factory = object : androidx.lifecycle.ViewModelProvider.Factory {
                         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -84,8 +93,17 @@ fun MahasiswaNavigation(onLogout: () -> Unit) {
                 EditProfileScreen(navController = navController, viewModel = editViewModel)
             }
 
-
+            composable(
+                route = "${Routes.DETAIL}/{pengajuanId}",
+                arguments = listOf(navArgument("pengajuanId") { type = NavType.LongType })
+            ) { backStackEntry ->
+                val id = backStackEntry.arguments?.getLong("pengajuanId") ?: 0L
+                DetailPengajuanMahasiswaScreen(
+                    navController = navController,
+                    viewModel = mahasiswaViewModel,
+                    pengajuanId = id
+                )
+            }
         }
     }
 }
-

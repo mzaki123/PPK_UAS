@@ -12,6 +12,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +33,7 @@ fun EditProfileScreen(
     navController: NavController,
     viewModel: EditProfileViewModel // Pastikan ViewModel sudah di-inject dengan benar
 ) {
-    val userState by viewModel.userState.collectAsState()
+    val fetchState by viewModel.userState.collectAsState()
     val updateState by viewModel.updateState.collectAsState()
     val context = LocalContext.current
     val role = remember { SessionManager.getRole()?.uppercase() ?: "" }
@@ -40,21 +42,26 @@ fun EditProfileScreen(
     var nama by remember { mutableStateOf("") }
     var identifier by remember { mutableStateOf("") } // NIM atau NIP
     var extraInfo by remember { mutableStateOf("") } // Kelas/Jurusan
+    var isIdentifierEditable by remember { mutableStateOf(false) }
 
     // Sinkronkan data saat data profil berhasil dimuat
-    LaunchedEffect(userState) {
-        when (val user = userState) {
-            is MahasiswaDto -> {
-                nama = user.nama
-                identifier = user.nim
-                extraInfo = user.kelas ?: user.jurusan ?: ""
-            }
-            is KemahasiswaanDto -> {
-                nama = user.nama
-                identifier = user.nip
-            }
+    LaunchedEffect(fetchState) {
+        if (fetchState is FetchProfileUiState.Success) {
+            val user = (fetchState as FetchProfileUiState.Success).data
+            // Tentukan apakah identifier bisa diedit berdasarkan data awal
+            isIdentifierEditable = viewModel.isIdentifierEditable(user)
 
-            else -> {}
+            when (user) {
+                is MahasiswaDto -> {
+                    nama = user.nama
+                    identifier = user.nim ?: "" // Isi dengan NIM yang ada atau string kosong
+                    extraInfo = user.kelas ?: user.jurusan ?: ""
+                }
+                is KemahasiswaanDto -> {
+                    nama = user.nama
+                    identifier = user.nip ?: "" // Isi dengan NIP yang ada atau string kosong
+                }
+            }
         }
     }
 
@@ -77,7 +84,7 @@ fun EditProfileScreen(
             )
         }
     ) { paddingValues ->
-        if (userState == null) {
+        if (fetchState == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         } else {
             Column(
@@ -100,12 +107,26 @@ fun EditProfileScreen(
                 // Field Identifier (NIM/NIP) - Read Only
                 OutlinedTextField(
                     value = identifier,
-                    onValueChange = {},
-                    label = { Text(if (role == "MAHASISWA") "NIM" else "NIP") },
+                    onValueChange = { if (isIdentifierEditable) identifier = it }, // Hanya bisa diubah jika diizinkan
+                    label = {
+                        // Label dinamis
+                        val labelText = if (role == "MAHASISWA") "NIM" else "NIP"
+                        Text(if (isIdentifierEditable) labelText else "$labelText (TIDAK DAPAT DIUBAH)")
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    readOnly = true,
+                    readOnly = !isIdentifierEditable, // Kunci field jika tidak bisa diedit
                     leadingIcon = { Icon(Icons.Default.Badge, null) },
-                    colors = OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color(0xFFF1F5F9))
+                    trailingIcon = {
+                        // Tampilkan ikon gembok jika sudah tidak bisa diedit
+                        if (!isIdentifierEditable) {
+                            Icon(Icons.Default.Lock, null)
+                        }
+                    },
+                    colors = if (!isIdentifierEditable) {
+                        OutlinedTextFieldDefaults.colors(unfocusedContainerColor = Color(0xFFF1F5F9))
+                    } else {
+                        OutlinedTextFieldDefaults.colors()
+                    }
                 )
 
                 // Field Nama

@@ -1,31 +1,16 @@
 package com.example.uas.data.repository
 
-import com.example.uas.model.MahasiswaDto
-import com.example.uas.model.Pengajuan
-import com.example.uas.model.request.CreatePengajuanRequest
 import com.example.uas.service.ApiService
-import retrofit2.Response
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
 
 class MahasiswaRepository(private val apiService: ApiService) {
 
-    /**
-     * Mengambil riwayat pengajuan milik mahasiswa yang sedang login
-     * Token otomatis ditempel oleh Interceptor
-     */
-    suspend fun getMyPengajuan(): Response<List<Pengajuan>> {
-        return apiService.getMyPengajuan()
-    }
+    suspend fun getMyProfile() = apiService.getMahasiswaProfile()
 
-    /**
-     * Membuat pengajuan surat baru
-     */
-    suspend fun createPengajuan(tujuan: String): Response<Unit> {
-        val request = CreatePengajuanRequest(tujuanSurat = tujuan)
-        return apiService.createPengajuan(request)
-    }
+    suspend fun getMyPengajuan() = apiService.getMyPengajuan()
 
-    suspend fun getMyProfile(): Response<MahasiswaDto> {
-        return apiService.getMahasiswaProfile()
-    }
-
+    // SINKRONISASI: Menerima Multipart & RequestBody dari ViewModel
+    suspend fun createPengajuanWithFile(tujuan: RequestBody, file: MultipartBody.Part) =
+        apiService.createPengajuan(tujuan, file)
 }

@@ -40,7 +40,7 @@ fun ManajemenUserScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Semua") }
 
-    // Update ViewModel when search query or filter changes
+    // Update ViewModel saat search atau filter berubah
     LaunchedEffect(searchQuery) {
         userViewModel.setSearchQuery(searchQuery)
     }
@@ -139,7 +139,6 @@ fun ManajemenUserScreen(
     }
 }
 
-// TopAppBar, UserListItem, and RoleBadge composables remain the same
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ManajemenUserTopAppBar() {
@@ -158,6 +157,14 @@ fun ManajemenUserTopAppBar() {
 
 @Composable
 fun UserListItem(user: User, onClick: () -> Unit, modifier: Modifier = Modifier) {
+
+    // LOGIKA PERBAIKAN: Pastikan handle null dan Role Admin
+    val displayName = when {
+        user.role.equals("ADMIN", ignoreCase = true) -> "Sistem Administrator"
+        user.name.isNullOrBlank() -> "User Belum Mengisi Profil"
+        else -> user.name
+    }
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -193,7 +200,7 @@ fun UserListItem(user: User, onClick: () -> Unit, modifier: Modifier = Modifier)
                     Spacer(modifier = Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = user.name,
+                            text = displayName, // PERBAIKAN: Gunakan displayName, bukan user.name
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp,
                             color = Color(0xFF0D121B)
